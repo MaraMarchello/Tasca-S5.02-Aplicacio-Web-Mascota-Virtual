@@ -3,12 +3,12 @@ spring:
     name: codemate
   
   datasource:
-    url: jdbc:postgresql://localhost:5432/codemate
-    username: codemate
-    password: codemate
+    url: jdbc:postgresql://localhost:5433/codemate
+    username: postgres
+    password: 78446660579
     driver-class-name: org.postgresql.Driver
     hikari:
-      connection-timeout: 20000
+      connection-timeout: 30000
       maximum-pool-size: 5
   
   jpa:
@@ -46,25 +46,21 @@ spring:
               - user:email
               - read:user
   
-  cloud:
-    gateway:
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
-    config:
-      enabled: false
-    eureka:
-      client:
-       enabled: false
-
   flyway:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
+    url: jdbc:postgresql://localhost:5433/codemate
+    user: postgres
+    password: 78446660579
+    clean-disabled: false
+  
+  cache:
+    type: simple
+    cache-names: codeAssistance,errorExplanations,gitErrorExplanations
   
 server:
-  port: 8080
+  port: 8081
   
 management:
   endpoints:
@@ -78,19 +74,17 @@ management:
 logging:
   level:
     com.codemate: DEBUG
-    org.springframework: INFO
+    org.springframework.web: INFO
     org.hibernate: INFO
   
 openai:
   api:
     key: ${OPENAI_API_KEY:your-api-key-here}
-    model: gpt-4
-    max-tokens: 2000
-    temperature: 0.7
+    timeout: 180
 
 app:
   cors:
-    allowed-origins: http://localhost:8080
+    allowed-origins: http://localhost:8081
     allowed-methods: GET,POST,PUT,DELETE,OPTIONS
     allowed-headers: "*"
     allow-credentials: true
@@ -98,11 +92,20 @@ app:
   cache:
     ttl: 3600 # 1 hour in seconds 
   jwt:
+    # A secure, randomly generated key for development. In production, use environment variables.
     secret: ${JWT_SECRET:04ca023b39512e46d0c2cf4b48d5aac61d34302994c87ed4eff225dcf3b0a218739f3897051a057f9b846a69ea2927a587044164b7bae5e1306219d50b588cb1}
-    expiration: 864000000 # 10 days
+    expiration: 86400000 # 24 hours (in milliseconds)
+    generate-random-secret: ${JWT_GENERATE_RANDOM:false} # Set to true to generate a random key at startup (dev only)
+    cookie:
+      secure: true # Only send over HTTPS
+      http-only: true # Prevent JavaScript access
+      domain: ${COOKIE_DOMAIN:localhost}
+      path: /
+      same-site: strict # Prevent CSRF
+      max-age: 86400 # 24 hours (in seconds)
   oauth2:
-    redirectUri: ${OAUTH2_REDIRECT_URI:http://localhost:8080/dashboard}
+    redirectUri: ${OAUTH2_REDIRECT_URI:http://localhost:8081/dashboard}
     authorizedRedirectUris:
-      - http://localhost:8080/dashboard
-      - http://localhost:8080/oauth2/redirect
-      - http://localhost:8080/login 
+      - http://localhost:8081/dashboard
+      - http://localhost:8081/oauth2/redirect
+      - http://localhost:8081/login 
