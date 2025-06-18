@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
+import Layout from '../components/layout/Layout';
+import { Button } from '../components/ui';
 
 interface User {
   id: number;
@@ -157,46 +159,42 @@ const AdminDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
+      <Layout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading admin dashboard...</p>
+          </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-            <button
-              onClick={loadDashboardData}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Refresh Data
-            </button>
-          </div>
+    <Layout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">⚙️ Admin Panel</h1>
+          <Button
+            onClick={loadDashboardData}
+            variant="primary"
+          >
+            Refresh Data
+          </Button>
         </div>
-      </div>
 
-      {error && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <p className="text-red-800">{error}</p>
+        {error && (
+          <div className="bg-error-50 dark:bg-error-950 border border-error-200 dark:border-error-800 rounded-md p-4">
+            <p className="text-error-800 dark:text-error-200">{error}</p>
             <button
               onClick={() => setError(null)}
-              className="mt-2 text-red-600 hover:text-red-800 underline"
+              className="mt-2 text-error-600 dark:text-error-400 hover:text-error-800 dark:hover:text-error-200 underline"
             >
               Dismiss
             </button>
           </div>
-        </div>
-      )}
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        )}
         {/* Tab Navigation */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
@@ -226,109 +224,97 @@ const AdminDashboard: React.FC = () => {
         {activeTab === 'dashboard' && stats && (
           <div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
+              <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="p-6">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
-                        <span className="text-white font-bold">U</span>
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">👥</span>
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
-                        <dd className="text-lg font-medium text-gray-900">{stats.totalUsers}</dd>
-                      </dl>
+                    <div className="ml-4 flex-1">
+                      <dt className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Total Users</dt>
+                      <dd className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalUsers}</dd>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
+              <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="p-6">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
-                        <span className="text-white font-bold">P</span>
+                      <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">🐾</span>
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Total Pets</dt>
-                        <dd className="text-lg font-medium text-gray-900">{stats.totalPets}</dd>
-                      </dl>
+                    <div className="ml-4 flex-1">
+                      <dt className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Total Pets</dt>
+                      <dd className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalPets}</dd>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
+              <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="p-6">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
-                        <span className="text-white font-bold">$</span>
+                      <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">💰</span>
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Points Awarded</dt>
-                        <dd className="text-lg font-medium text-gray-900">{stats.totalPointsAwarded.toLocaleString()}</dd>
-                      </dl>
+                    <div className="ml-4 flex-1">
+                      <dt className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Points Awarded</dt>
+                      <dd className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalPointsAwarded.toLocaleString()}</dd>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
+              <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="p-6">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
-                        <span className="text-white font-bold">A</span>
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">⚡</span>
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Active Users</dt>
-                        <dd className="text-lg font-medium text-gray-900">{stats.activeUsers}</dd>
-                      </dl>
+                    <div className="ml-4 flex-1">
+                      <dt className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Active Users</dt>
+                      <dd className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activeUsers}</dd>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
+              <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="p-6">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-pink-500 rounded-md flex items-center justify-center">
-                        <span className="text-white font-bold">😊</span>
+                      <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-500 rounded-xl flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">😊</span>
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Happy Pets</dt>
-                        <dd className="text-lg font-medium text-gray-900">{stats.happyPets}</dd>
-                      </dl>
+                    <div className="ml-4 flex-1">
+                      <dt className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Happy Pets</dt>
+                      <dd className="text-2xl font-bold text-gray-900 dark:text-white">{stats.happyPets}</dd>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
+              <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="p-6">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-indigo-500 rounded-md flex items-center justify-center">
-                        <span className="text-white font-bold">N</span>
+                      <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">🆕</span>
                       </div>
                     </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">Recent Signups</dt>
-                        <dd className="text-lg font-medium text-gray-900">{stats.recentSignups}</dd>
-                      </dl>
+                    <div className="ml-4 flex-1">
+                      <dt className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Recent Signups</dt>
+                      <dd className="text-2xl font-bold text-gray-900 dark:text-white">{stats.recentSignups}</dd>
                     </div>
                   </div>
                 </div>
@@ -640,7 +626,7 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+    </Layout>
   );
 };
 

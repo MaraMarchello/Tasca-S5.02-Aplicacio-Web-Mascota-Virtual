@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authApi } from '../utils/api';
+import Layout from '../components/layout/Layout';
 
 interface LoginFormData {
   email: string;
@@ -49,7 +50,8 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
+    <Layout showSidebar={false} showBreadcrumb={false} padding={false}>
+      <div className="min-h-screen bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         {/* Logo/Brand */}
         <div className="text-center mb-8">
@@ -131,7 +133,8 @@ const Login: React.FC = () => {
           </p>
         </div>
       </div>
-    </div>
+      </div>
+    </Layout>
   );
 };
 
