@@ -5,12 +5,14 @@ import com.codemate.model.RoleType;
 import com.codemate.model.User;
 import com.codemate.repository.RoleRepository;
 import com.codemate.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 
+@Slf4j
 @Component
 public class DataLoader implements CommandLineRunner {
 
@@ -35,12 +37,12 @@ public class DataLoader implements CommandLineRunner {
         // Create test users if they don't exist
         createTestUserIfNotExists();
         
-        System.out.println("=================================");
-        System.out.println("DataLoader: Initialization complete");
-        System.out.println("Test user credentials:");
-        System.out.println("Email: admin@codemate.com");
-        System.out.println("Password: password123");
-        System.out.println("=================================");
+        log.info("=================================");
+        log.info("DataLoader: Initialization complete");
+        log.info("Test user credentials:");
+        log.info("Email: admin@codemate.com");
+        log.info("Password: password123");
+        log.info("=================================");
     }
 
     /**
@@ -49,11 +51,11 @@ public class DataLoader implements CommandLineRunner {
      * @param roleType - The type of role to create (ROLE_USER, ROLE_ADMIN, etc.)
      */
     private void createRoleIfNotExists(RoleType roleType) {
-        if (!roleRepository.findByName(roleType).isPresent()) {
+        if (roleRepository.findByName(roleType).isEmpty()) {
             Role role = new Role();
             role.setName(roleType);
             roleRepository.save(role);
-            System.out.println("Created role: " + roleType);
+            log.info("Created role: {}", roleType);
         }
     }
 
@@ -77,7 +79,7 @@ public class DataLoader implements CommandLineRunner {
             adminUser.setRoles(Collections.singleton(adminRole));
             
             userRepository.save(adminUser);
-            System.out.println("Created admin user: admin@codemate.com");
+            log.info("Created admin user: admin@codemate.com");
         }
 
         // Create regular user
@@ -95,7 +97,7 @@ public class DataLoader implements CommandLineRunner {
             regularUser.setRoles(Collections.singleton(userRole));
             
             userRepository.save(regularUser);
-            System.out.println("Created regular user: user@codemate.com");
+            log.info("Created regular user: user@codemate.com");
         }
     }
 } 

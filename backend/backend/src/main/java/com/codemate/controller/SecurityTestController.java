@@ -28,6 +28,11 @@ import java.util.concurrent.ExecutionException;
 @RequestMapping("/api/security-test")
 public class SecurityTestController {
 
+    private static final String KEY_AUTHENTICATED = "authenticated";
+    private static final String KEY_USERNAME = "username";
+    private static final String KEY_AUTHORITIES = "authorities";
+    private static final String KEY_USER_ID = "userId";
+    
     private final SecurityContextService securityContextService;
 
     public SecurityTestController(SecurityContextService securityContextService) {
@@ -38,19 +43,18 @@ public class SecurityTestController {
      * Test endpoint to check the current security context
      */
     @GetMapping("/context")
-    public ResponseEntity<?> checkSecurityContext() {
+    public ResponseEntity<Map<String, Object>> checkSecurityContext() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
         Map<String, Object> response = new HashMap<>();
-        response.put("authenticated", authentication != null && authentication.isAuthenticated());
+        response.put(KEY_AUTHENTICATED, authentication != null && authentication.isAuthenticated());
         
         if (authentication != null && authentication.isAuthenticated()) {
-            response.put("username", authentication.getName());
-            response.put("authorities", authentication.getAuthorities());
+            response.put(KEY_USERNAME, authentication.getName());
+            response.put(KEY_AUTHORITIES, authentication.getAuthorities());
             
-            if (authentication.getPrincipal() instanceof UserPrincipal) {
-                UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-                response.put("userId", userPrincipal.getId());
+            if (authentication.getPrincipal() instanceof UserPrincipal userPrincipal) {
+                response.put(KEY_USER_ID, userPrincipal.getId());
             }
         }
         
@@ -62,16 +66,16 @@ public class SecurityTestController {
      * Test endpoint to check the current security context using SecurityContextService
      */
     @GetMapping("/service-context")
-    public ResponseEntity<?> checkSecurityContextService() {
+    public ResponseEntity<Map<String, Object>> checkSecurityContextService() {
         Map<String, Object> response = new HashMap<>();
-        response.put("authenticated", securityContextService.isAuthenticated());
+        response.put(KEY_AUTHENTICATED, securityContextService.isAuthenticated());
         
         if (securityContextService.isAuthenticated()) {
             UserPrincipal userPrincipal = securityContextService.getCurrentUserPrincipal();
             if (userPrincipal != null) {
-                response.put("username", userPrincipal.getUsername());
-                response.put("userId", userPrincipal.getId());
-                response.put("authorities", userPrincipal.getAuthorities());
+                response.put(KEY_USERNAME, userPrincipal.getUsername());
+                response.put(KEY_USER_ID, userPrincipal.getId());
+                response.put(KEY_AUTHORITIES, userPrincipal.getAuthorities());
             }
         }
         
@@ -83,16 +87,16 @@ public class SecurityTestController {
      * Test endpoint to check the current security context using SecurityUtils
      */
     @GetMapping("/utils-context")
-    public ResponseEntity<?> checkSecurityUtils() {
+    public ResponseEntity<Map<String, Object>> checkSecurityUtils() {
         Map<String, Object> response = new HashMap<>();
-        response.put("authenticated", SecurityUtils.isAuthenticated());
+        response.put(KEY_AUTHENTICATED, SecurityUtils.isAuthenticated());
         
         if (SecurityUtils.isAuthenticated()) {
             UserPrincipal userPrincipal = SecurityUtils.getCurrentUserPrincipal();
             if (userPrincipal != null) {
-                response.put("username", userPrincipal.getUsername());
-                response.put("userId", userPrincipal.getId());
-                response.put("authorities", userPrincipal.getAuthorities());
+                response.put(KEY_USERNAME, userPrincipal.getUsername());
+                response.put(KEY_USER_ID, userPrincipal.getId());
+                response.put(KEY_AUTHORITIES, userPrincipal.getAuthorities());
             }
         }
         
@@ -104,7 +108,7 @@ public class SecurityTestController {
      * Test endpoint to check if the security context is propagated to async tasks
      */
     @GetMapping("/async-context")
-    public ResponseEntity<?> checkAsyncSecurityContext() throws ExecutionException, InterruptedException {
+    public ResponseEntity<Map<String, Object>> checkAsyncSecurityContext() throws ExecutionException, InterruptedException {
         // Get current authentication
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
@@ -135,7 +139,7 @@ public class SecurityTestController {
      */
     @GetMapping("/admin-only")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> adminOnlyEndpoint() {
+    public ResponseEntity<ApiResponse> adminOnlyEndpoint() {
         return ResponseEntity.ok(new ApiResponse(true, "You have ADMIN access"));
     }
     
@@ -144,7 +148,7 @@ public class SecurityTestController {
      */
     @GetMapping("/user-only")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> userOnlyEndpoint() {
+    public ResponseEntity<ApiResponse> userOnlyEndpoint() {
         return ResponseEntity.ok(new ApiResponse(true, "You have USER access"));
     }
     
@@ -152,15 +156,15 @@ public class SecurityTestController {
      * Test endpoint that uses @AuthenticationPrincipal
      */
     @GetMapping("/principal")
-    public ResponseEntity<?> principalEndpoint(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+    public ResponseEntity<Object> principalEndpoint(@AuthenticationPrincipal UserPrincipal userPrincipal) {
         if (userPrincipal == null) {
             return ResponseEntity.ok(new ApiResponse(false, "Not authenticated"));
         }
         
         Map<String, Object> response = new HashMap<>();
-        response.put("userId", userPrincipal.getId());
-        response.put("username", userPrincipal.getUsername());
-        response.put("authorities", userPrincipal.getAuthorities());
+        response.put(KEY_USER_ID, userPrincipal.getId());
+        response.put(KEY_USERNAME, userPrincipal.getUsername());
+        response.put(KEY_AUTHORITIES, userPrincipal.getAuthorities());
         
         return ResponseEntity.ok(response);
     }

@@ -2,20 +2,16 @@ package com.codemate.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Optional;
 
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -38,11 +34,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        // Skip JWT filter for non-API paths and authentication endpoints
-        return !path.startsWith("/api/") || 
-               path.startsWith("/api/auth/") || 
-               path.startsWith("/api/oauth2/") ||
-               path.startsWith("/api/public/");
+        // Skip JWT filter for static resources, auth, and OAuth2 endpoints
+        return path.equals("/api/auth/login") ||
+                path.equals("/api/auth/form-login") ||
+                path.equals("/api/auth/signup") ||
+                path.equals("/api/auth/logout") ||
+                path.startsWith("/api/oauth2/") ||
+                path.startsWith("/oauth2/") ||
+                path.startsWith("/api/public/") ||
+                path.equals("/login") ||
+                path.equals("/signup") ||
+                path.startsWith("/css/") ||
+                path.startsWith("/js/") ||
+                path.startsWith("/images/");
     }
 
     @Override
@@ -51,30 +55,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                   @NonNull FilterChain filterChain)
             throws ServletException, IOException {
         try {
-            // Try to get JWT from Authorization header first (API clients)
+            // Get JWT from Authorization header
             String jwt = getJwtFromHeader(request);
             
-            // If not found in header, try to get from cookie (browser clients)
-            if (!StringUtils.hasText(jwt)) {
-                jwt = getJwtFromCookie(request);
-                if (StringUtils.hasText(jwt)) {
-                    log.debug("JWT token found in cookie");
-                }
+            if (StringUtils.hasText(jwt)) {
+                log.debug("JWT token found in Authorization header for path: {}", request.getServletPath());
             } else {
-                log.debug("JWT token found in Authorization header");
+                log.debug("No JWT token found in Authorization header for path: {}", request.getServletPath());
             }
 
-            if (StringUtils.hasText(jwt)) {
-                if (tokenProvider.validateToken(jwt)) {
-                    Long userId = tokenProvider.getUserIdFromJWT(jwt);
-                    log.debug("Processing JWT token for user ID: {}", userId);
+            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
+                Long userId = tokenProvider.getUserIdFromJWT(jwt);
+                log.debug("Processing JWT token for user ID: {}", userId);
 
-                    UserDetails userDetails = customUserDetailsService.loadUserById(userId);
-                    
-                    // Use the SecurityContextService to set the authentication
-                    securityContextService.createAndSetAuthentication(userDetails, request);
-                    log.debug("User authenticated successfully: {}", userDetails.getUsername());
-                }
+                UserDetails userDetails = customUserDetailsService.loadUserById(userId);
+                
+                // Use the SecurityContextService to set the authentication
+                securityContextService.createAndSetAuthentication(userDetails, request);
+                log.debug("User authenticated successfully: {}", userDetails.getUsername());
             }
         } catch (Exception ex) {
             log.error("Could not set user authentication in security context: {}", ex.getMessage(), ex);
@@ -99,14 +97,5 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
     
-    /**
-     * Extract JWT token from cookies
-     * 
-     * @param request the HTTP request
-     * @return the JWT token or null if not found
-     */
-    private String getJwtFromCookie(HttpServletRequest request) {
-        Optional<Cookie> jwtCookie = CookieUtils.getJwtCookie(request);
-        return jwtCookie.map(Cookie::getValue).orElse(null);
-    }
+
 } 

@@ -28,23 +28,6 @@ spring:
     jwt:
       secret: ${JWT_SECRET:your-256-bit-secret-key-here}
       expiration: 86400000 # 24 hours
-    oauth2:
-      client:
-        registration:
-          google:
-            clientId: ${GOOGLE_CLIENT_ID}
-            clientSecret: ${GOOGLE_CLIENT_SECRET}
-            redirectUri: "{baseUrl}/oauth2/callback/{registrationId}"
-            scope:
-              - email
-              - profile
-          github:
-            clientId: ${GITHUB_CLIENT_ID}
-            clientSecret: ${GITHUB_CLIENT_SECRET}
-            redirectUri: "{baseUrl}/oauth2/callback/{registrationId}"
-            scope:
-              - user:email
-              - read:user
   
   flyway:
     enabled: true
@@ -58,6 +41,11 @@ spring:
   cache:
     type: simple
     cache-names: codeAssistance,errorExplanations,gitErrorExplanations
+
+  # Disable static resources for REST API
+  web:
+    resources:
+      add-mappings: false
   
 server:
   port: 8081
@@ -84,10 +72,7 @@ openai:
 
 app:
   cors:
-    allowed-origins: http://localhost:8081
-    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
-    allowed-headers: "*"
-    allow-credentials: true
+    allowed-origins: http://localhost:3000,http://localhost:5173
   
   cache:
     ttl: 3600 # 1 hour in seconds 
@@ -97,11 +82,11 @@ app:
     expiration: 86400000 # 24 hours (in milliseconds)
     generate-random-secret: ${JWT_GENERATE_RANDOM:false} # Set to true to generate a random key at startup (dev only)
     cookie:
-      secure: true # Only send over HTTPS
+      secure: false # Set to false for HTTP localhost development
       http-only: true # Prevent JavaScript access
       domain: ${COOKIE_DOMAIN:localhost}
       path: /
-      same-site: strict # Prevent CSRF
+      same-site: lax # Changed from strict to lax for better compatibility
       max-age: 86400 # 24 hours (in seconds)
   oauth2:
     redirectUri: ${OAUTH2_REDIRECT_URI:http://localhost:8081/dashboard}

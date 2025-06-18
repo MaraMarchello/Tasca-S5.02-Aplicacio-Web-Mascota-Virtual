@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.SerializationUtils;
 
+import java.io.Serializable;
 import java.util.Base64;
 import java.util.Optional;
 
@@ -20,45 +21,33 @@ public class CookieUtils {
 
     public static final String JWT_COOKIE_NAME = "jwt";
     
-    private static String cookieDomain;
-    private static String cookiePath;
-    private static boolean cookieSecure;
-    private static boolean cookieHttpOnly;
-    private static String cookieSameSite;
-    private static int cookieMaxAge;
+    private final String cookieDomain;
+    private final String cookiePath;
+    private final boolean cookieSecure;
+    private final boolean cookieHttpOnly;
+    private final String cookieSameSite;
+    private final int cookieMaxAge;
     
-    @Value("${app.jwt.cookie.domain:localhost}")
-    public void setCookieDomain(String domain) {
-        cookieDomain = domain;
-    }
-    
-    @Value("${app.jwt.cookie.path:/}")
-    public void setCookiePath(String path) {
-        cookiePath = path;
-    }
-    
-    @Value("${app.jwt.cookie.secure:true}")
-    public void setCookieSecure(boolean secure) {
-        cookieSecure = secure;
-    }
-    
-    @Value("${app.jwt.cookie.http-only:true}")
-    public void setCookieHttpOnly(boolean httpOnly) {
-        cookieHttpOnly = httpOnly;
-    }
-    
-    @Value("${app.jwt.cookie.same-site:strict}")
-    public void setCookieSameSite(String sameSite) {
-        cookieSameSite = sameSite;
-    }
-    
-    @Value("${app.jwt.cookie.max-age:86400}")
-    public void setCookieMaxAge(int maxAge) {
-        cookieMaxAge = maxAge;
-    }
-    
-    private CookieUtils() {
-        // Utility class with static methods, private constructor to prevent instantiation
+    /**
+     * Constructor that initializes configuration values
+     * Package-private to hide it from public API while allowing Spring to use it for injection
+     */
+    CookieUtils(
+            @Value("${app.jwt.cookie.domain:localhost}") String domain,
+            @Value("${app.jwt.cookie.path:/}") String path,
+            @Value("${app.jwt.cookie.secure:true}") boolean secure,
+            @Value("${app.jwt.cookie.http-only:true}") boolean httpOnly,
+            @Value("${app.jwt.cookie.same-site:strict}") String sameSite,
+            @Value("${app.jwt.cookie.max-age:86400}") int maxAge) {
+        this.cookieDomain = domain;
+        this.cookiePath = path;
+        this.cookieSecure = secure;
+        this.cookieHttpOnly = httpOnly;
+        this.cookieSameSite = sameSite;
+        this.cookieMaxAge = maxAge;
+
+        log.info("Initialized cookie settings: domain={}, path={}, secure={}, httpOnly={}, sameSite={}, maxAge={}",
+                this.cookieDomain, this.cookiePath, this.cookieSecure, this.cookieHttpOnly, this.cookieSameSite, this.cookieMaxAge);
     }
     
     /**
@@ -68,9 +57,9 @@ public class CookieUtils {
      * @param maxAge the maximum age of the cookie in seconds
      * @return the created cookie
      */
-    public static Cookie createJwtCookie(String token, int maxAge) {
+    public Cookie createJwtCookie(String token, int maxAge) {
         Cookie cookie = new Cookie(JWT_COOKIE_NAME, token);
-        cookie.setPath(cookiePath != null ? cookiePath : "/");
+        cookie.setPath(cookiePath);
         cookie.setHttpOnly(cookieHttpOnly);
         cookie.setSecure(cookieSecure);
         cookie.setMaxAge(maxAge);
@@ -89,7 +78,7 @@ public class CookieUtils {
      * @param token the JWT token
      * @return the created cookie
      */
-    public static Cookie createJwtCookie(String token) {
+    public Cookie createJwtCookie(String token) {
         return createJwtCookie(token, cookieMaxAge);
     }
     
@@ -99,22 +88,31 @@ public class CookieUtils {
      * @param response the HTTP response
      * @param token the JWT token
      */
-    public static void addJwtCookie(HttpServletResponse response, String token) {
+    public void addJwtCookie(HttpServletResponse response, String token) {
         Cookie cookie = createJwtCookie(token);
-        response.addCookie(cookie);
         
         // Set SameSite attribute (not directly supported by Java Cookie API)
         if (cookieSameSite != null && !cookieSameSite.isEmpty()) {
-            String sameSiteHeader = String.format("%s=%s; Path=%s; HttpOnly=%s; Secure=%s; SameSite=%s; Max-Age=%d", 
-                    JWT_COOKIE_NAME, token, cookie.getPath(), 
-                    cookie.isHttpOnly(), cookie.getSecure(), 
-                    cookieSameSite, cookie.getMaxAge());
+            StringBuilder sameSiteHeader = new StringBuilder();
+            sameSiteHeader.append(String.format("%s=%s; Path=%s", JWT_COOKIE_NAME, token, cookie.getPath()));
             
-            if (cookie.getDomain() != null) {
-                sameSiteHeader += "; Domain=" + cookie.getDomain();
+            if (cookieHttpOnly) {
+                sameSiteHeader.append("; HttpOnly");
             }
             
-            response.setHeader("Set-Cookie", sameSiteHeader);
+            if (cookieSecure) {
+                sameSiteHeader.append("; Secure");
+            }
+            
+            sameSiteHeader.append(String.format("; SameSite=%s; Max-Age=%d", cookieSameSite, cookie.getMaxAge()));
+            
+            if (cookie.getDomain() != null) {
+                sameSiteHeader.append("; Domain=").append(cookie.getDomain());
+            }
+            
+            response.addHeader("Set-Cookie", sameSiteHeader.toString());
+        } else {
+            response.addCookie(cookie);
         }
         
         log.debug("Added JWT cookie to response");
@@ -127,22 +125,31 @@ public class CookieUtils {
      * @param token the JWT token
      * @param maxAge the maximum age of the cookie in seconds
      */
-    public static void addJwtCookie(HttpServletResponse response, String token, int maxAge) {
+    public void addJwtCookie(HttpServletResponse response, String token, int maxAge) {
         Cookie cookie = createJwtCookie(token, maxAge);
-        response.addCookie(cookie);
         
         // Set SameSite attribute (not directly supported by Java Cookie API)
         if (cookieSameSite != null && !cookieSameSite.isEmpty()) {
-            String sameSiteHeader = String.format("%s=%s; Path=%s; HttpOnly=%s; Secure=%s; SameSite=%s; Max-Age=%d", 
-                    JWT_COOKIE_NAME, token, cookie.getPath(), 
-                    cookie.isHttpOnly(), cookie.getSecure(), 
-                    cookieSameSite, cookie.getMaxAge());
+            StringBuilder sameSiteHeader = new StringBuilder();
+            sameSiteHeader.append(String.format("%s=%s; Path=%s", JWT_COOKIE_NAME, token, cookie.getPath()));
             
-            if (cookie.getDomain() != null) {
-                sameSiteHeader += "; Domain=" + cookie.getDomain();
+            if (cookieHttpOnly) {
+                sameSiteHeader.append("; HttpOnly");
             }
             
-            response.setHeader("Set-Cookie", sameSiteHeader);
+            if (cookieSecure) {
+                sameSiteHeader.append("; Secure");
+            }
+            
+            sameSiteHeader.append(String.format("; SameSite=%s; Max-Age=%d", cookieSameSite, cookie.getMaxAge()));
+            
+            if (cookie.getDomain() != null) {
+                sameSiteHeader.append("; Domain=").append(cookie.getDomain());
+            }
+            
+            response.addHeader("Set-Cookie", sameSiteHeader.toString());
+        } else {
+            response.addCookie(cookie);
         }
         
         log.debug("Added JWT cookie to response with max age: {}", maxAge);
@@ -153,9 +160,9 @@ public class CookieUtils {
      * 
      * @param response the HTTP response
      */
-    public static void deleteJwtCookie(HttpServletResponse response) {
+    public void deleteJwtCookie(HttpServletResponse response) {
         Cookie cookie = new Cookie(JWT_COOKIE_NAME, "");
-        cookie.setPath(cookiePath != null ? cookiePath : "/");
+        cookie.setPath(cookiePath);
         cookie.setHttpOnly(cookieHttpOnly);
         cookie.setSecure(cookieSecure);
         cookie.setMaxAge(0); // Delete immediately
@@ -165,20 +172,28 @@ public class CookieUtils {
             cookie.setDomain(cookieDomain);
         }
         
-        response.addCookie(cookie);
-        
         // Set SameSite attribute (not directly supported by Java Cookie API)
         if (cookieSameSite != null && !cookieSameSite.isEmpty()) {
-            String sameSiteHeader = String.format("%s=; Path=%s; HttpOnly=%s; Secure=%s; SameSite=%s; Max-Age=0", 
-                    JWT_COOKIE_NAME, cookie.getPath(), 
-                    cookie.isHttpOnly(), cookie.getSecure(), 
-                    cookieSameSite);
+            StringBuilder sameSiteHeader = new StringBuilder();
+            sameSiteHeader.append(String.format("%s=; Path=%s", JWT_COOKIE_NAME, cookie.getPath()));
             
-            if (cookie.getDomain() != null) {
-                sameSiteHeader += "; Domain=" + cookie.getDomain();
+            if (cookieHttpOnly) {
+                sameSiteHeader.append("; HttpOnly");
             }
             
-            response.setHeader("Set-Cookie", sameSiteHeader);
+            if (cookieSecure) {
+                sameSiteHeader.append("; Secure");
+            }
+            
+            sameSiteHeader.append(String.format("; SameSite=%s; Max-Age=0", cookieSameSite));
+            
+            if (cookie.getDomain() != null) {
+                sameSiteHeader.append("; Domain=").append(cookie.getDomain());
+            }
+            
+            response.addHeader("Set-Cookie", sameSiteHeader.toString());
+        } else {
+            response.addCookie(cookie);
         }
         
         log.debug("Deleted JWT cookie from response");
@@ -221,7 +236,7 @@ public class CookieUtils {
      * @param object the object to serialize
      * @return the serialized object as a string
      */
-    public static String serialize(Object object) {
+    public static String serialize(Serializable object) {
         return Base64.getUrlEncoder().encodeToString(SerializationUtils.serialize(object));
     }
     
@@ -234,8 +249,7 @@ public class CookieUtils {
      * @return the deserialized object
      */
     public static <T> T deserialize(Cookie cookie, Class<T> cls) {
-        return cls.cast(SerializationUtils.deserialize(
-                Base64.getUrlDecoder().decode(cookie.getValue())
-        ));
+        byte[] bytes = Base64.getUrlDecoder().decode(cookie.getValue());
+        return cls.cast(SerializationUtils.deserialize(bytes));
     }
 } 
