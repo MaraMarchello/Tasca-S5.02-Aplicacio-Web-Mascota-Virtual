@@ -37,6 +37,34 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(apiResponse, HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(PetNotFoundException.class)
+    public ResponseEntity<ApiResponse> handlePetNotFoundException(PetNotFoundException ex, WebRequest request) {
+        log.error("Pet not found: {}", ex.getMessage(), ex);
+        ApiResponse apiResponse = new ApiResponse(false, ex.getMessage());
+        return new ResponseEntity<>(apiResponse, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(PetAlreadyExistsException.class)
+    public ResponseEntity<ApiResponse> handlePetAlreadyExistsException(PetAlreadyExistsException ex, WebRequest request) {
+        log.error("Pet already exists: {}", ex.getMessage(), ex);
+        ApiResponse apiResponse = new ApiResponse(false, ex.getMessage());
+        return new ResponseEntity<>(apiResponse, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(InsufficientPointsException.class)
+    public ResponseEntity<ApiResponse> handleInsufficientPointsException(InsufficientPointsException ex, WebRequest request) {
+        log.error("Insufficient points: {}", ex.getMessage(), ex);
+        ApiResponse apiResponse = new ApiResponse(false, ex.getMessage());
+        return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ItemNotFoundException.class)
+    public ResponseEntity<ApiResponse> handleItemNotFoundException(ItemNotFoundException ex, WebRequest request) {
+        log.error("Item not found: {}", ex.getMessage(), ex);
+        ApiResponse apiResponse = new ApiResponse(false, ex.getMessage());
+        return new ResponseEntity<>(apiResponse, HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ApiResponse> handleBadRequestException(BadRequestException ex, WebRequest request) {
         log.error("Bad request: {}", ex.getMessage(), ex);

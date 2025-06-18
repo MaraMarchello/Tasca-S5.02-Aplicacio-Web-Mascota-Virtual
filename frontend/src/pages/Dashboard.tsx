@@ -71,6 +71,14 @@ const Dashboard: React.FC = () => {
               <span className="text-white text-sm">
                 Welcome, {user.name}!
               </span>
+              {localStorage.getItem('userRole') === 'ADMIN' && (
+                <button
+                  onClick={() => navigate('/admin')}
+                  className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                >
+                  Admin Panel
+                </button>
+              )}
               <button
                 onClick={handleLogout}
                 className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
@@ -92,6 +100,20 @@ const Dashboard: React.FC = () => {
 
         {/* Feature Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200">
+            <div className="text-purple-600 text-4xl mb-4">
+              🐾
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Virtual Pet</h3>
+            <p className="text-gray-600 mb-4">Care for your coding companion, earn points, and unlock achievements!</p>
+            <button 
+              onClick={() => navigate('/pet')}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Meet Your Pet
+            </button>
+          </div>
+
           <div className="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200">
             <div className="text-blue-600 text-4xl mb-4">
               <i className="fas fa-code"></i>
@@ -122,17 +144,6 @@ const Dashboard: React.FC = () => {
             <p className="text-gray-600 mb-4">Understand and fix errors with detailed stack trace analysis.</p>
             <button className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-colors">
               Debug Now
-            </button>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200">
-            <div className="text-blue-400 text-4xl mb-4">
-              <i className="fas fa-user"></i>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Personal Area</h3>
-            <p className="text-gray-600 mb-4">Track your progress and manage your learning journey.</p>
-            <button className="bg-blue-400 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors">
-              View Profile
             </button>
           </div>
         </div>

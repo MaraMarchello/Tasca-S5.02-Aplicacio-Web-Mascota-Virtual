@@ -67,8 +67,17 @@ public class SecurityConfig {
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/health/**")).permitAll()
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/public/**")).permitAll()
                 
-                // Protected API endpoints
+                // Admin-only endpoints
+                .requestMatchers(AntPathRequestMatcher.antMatcher("/api/admin/**")).hasRole("ADMIN")
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/security-test/admin-only")).hasRole("ADMIN")
+                
+                // User-specific pet system endpoints (authenticated users can only access their own data)
+                .requestMatchers(AntPathRequestMatcher.antMatcher("/api/pets/**")).authenticated()
+                .requestMatchers(AntPathRequestMatcher.antMatcher("/api/shop/**")).authenticated()
+                .requestMatchers(AntPathRequestMatcher.antMatcher("/api/achievements/**")).authenticated()
+                .requestMatchers(AntPathRequestMatcher.antMatcher("/api/points/**")).authenticated()
+                
+                // Other protected endpoints
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/security-test/user-only")).hasRole("USER")
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/security-test/**")).authenticated()
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/**")).authenticated()

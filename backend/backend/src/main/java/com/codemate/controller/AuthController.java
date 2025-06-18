@@ -12,6 +12,8 @@ import com.codemate.payload.SignUpRequest;
 import com.codemate.repository.RoleRepository;
 import com.codemate.repository.UserRepository;
 import com.codemate.security.JwtTokenProvider;
+import com.codemate.security.UserPrincipal;
+import com.codemate.service.PointAwardHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +27,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.Collections;
+import java.util.Set;
 
 @Slf4j
 @RestController
@@ -36,18 +39,21 @@ public class AuthController {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
+    private final PointAwardHelper pointAwardHelper;
 
     public AuthController(
             AuthenticationManager authenticationManager,
             UserRepository userRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
-            JwtTokenProvider tokenProvider) {
+            JwtTokenProvider tokenProvider,
+            PointAwardHelper pointAwardHelper) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
+        this.pointAwardHelper = pointAwardHelper;
     }
 
     /**
@@ -68,8 +74,30 @@ public class AuthController {
             String jwt = tokenProvider.generateToken(authentication);
             log.debug("JWT token generated successfully for user: {}", loginRequest.getEmail());
 
-            // Return JWT token
-            return ResponseEntity.ok(new AuthResponse(jwt));
+            // Get user details for response
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            
+            // Award daily login points (async operation, won't fail login if it fails)
+            try {
+                pointAwardHelper.awardDailyLoginPoints(userPrincipal.getId());
+                log.debug("Daily login points check completed for user: {}", userPrincipal.getId());
+            } catch (Exception e) {
+                log.warn("Failed to award daily login points for user: {}, error: {}", loginRequest.getEmail(), e.getMessage());
+                // Don't fail the login process if point awarding fails
+            }
+
+            // Get user from database for complete info
+            User user = userRepository.findByEmail(loginRequest.getEmail())
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "email", loginRequest.getEmail()));
+            
+            // Extract role names
+            Set<String> roleNames = user.getRoles().stream()
+                    .map(role -> role.getName().name())
+                    .collect(java.util.stream.Collectors.toSet());
+
+            // Return JWT token with user info
+            return ResponseEntity.ok(new AuthResponse(jwt, user.getId(), 
+                user.getName(), user.getEmail(), roleNames));
             
         } catch (BadCredentialsException e) {
             log.warn("Failed login attempt for user: {}", loginRequest.getEmail());
