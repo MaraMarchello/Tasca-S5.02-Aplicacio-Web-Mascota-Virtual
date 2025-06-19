@@ -56,7 +56,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     // Add custom Java snippets
     if (language === 'java') {
       monaco.languages.registerCompletionItemProvider('java', {
-        provideCompletionItems: (model: any, position: any) => {
+        provideCompletionItems: (_model: any, _position: any) => {
           const suggestions = [
             {
               label: 'psvm',

@@ -14,6 +14,11 @@ java {
 	}
 }
 
+// Configure Java compiler to retain parameter names (required for Spring Framework 6.x)
+tasks.withType<JavaCompile> {
+	options.compilerArgs.add("-parameters")
+}
+
 configurations {
 	compileOnly {
 		extendsFrom(configurations.annotationProcessor.get())
@@ -71,6 +76,7 @@ dependencies {
 	testImplementation("org.testcontainers:junit-jupiter")
 	testImplementation("org.testcontainers:postgresql")
 	testImplementation("org.springframework.security:spring-security-test")
+	testRuntimeOnly("com.h2database:h2") // H2 for tests when Docker is not available
 }
 
 dependencyManagement {

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { userApi, getAuthToken } from '../utils/api';
 import Layout from '../components/layout/Layout';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '../components/ui';
-import { StatsCard, AchievementShowcase, ProgressTracker } from '../components/dashboard';
+import { StatsCard, AchievementShowcase, ProgressTracker, GitProgressCard } from '../components/dashboard';
 import { useToast } from '../contexts/ToastContext';
 
 interface User {
@@ -190,7 +190,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card variant="elevated" hover clickable onClick={handleNavigateToPet}>
             <CardHeader>
               <div className="flex items-center space-x-3">
@@ -247,10 +247,32 @@ const Dashboard: React.FC = () => {
               </p>
             </CardContent>
           </Card>
+
+          <Card variant="elevated" hover clickable onClick={() => navigate('/git-coach')}>
+            <CardHeader>
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-blue-500 rounded-xl flex items-center justify-center">
+                  <span className="text-2xl">🚀</span>
+                </div>
+                <div>
+                  <CardTitle>Git Coach</CardTitle>
+                  <CardDescription>Learn Git interactively</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Master Git commands through interactive scenarios and visualizations.
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Progress Tracking */}
         <ProgressTracker progressItems={mockProgress} />
+
+        {/* Git Learning Progress */}
+        <GitProgressCard userId={user.id} />
 
         {/* Achievement Showcase */}
         <AchievementShowcase achievements={mockAchievements} />

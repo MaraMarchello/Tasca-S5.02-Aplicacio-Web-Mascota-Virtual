@@ -22,7 +22,7 @@ const AIHelper: React.FC<AIHelperProps> = ({ className = '' }) => {
     showSuccess('Code generated and inserted into editor!');
   }, [showSuccess]);
 
-  const handleCodeExplained = useCallback((explanation: string) => {
+  const handleCodeExplained = useCallback((_explanation: string) => {
     showSuccess('Code explanation provided in chat!');
   }, [showSuccess]);
 

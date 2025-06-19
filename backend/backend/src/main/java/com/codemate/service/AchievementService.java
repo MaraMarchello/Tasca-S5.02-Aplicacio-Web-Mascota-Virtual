@@ -155,4 +155,90 @@ public class AchievementService {
     public void trackPetCreation(Long userId) {
         progressAchievement(userId, "PET_OWNER", 1);
     }
+    
+    // Git-specific achievement tracking methods
+    
+    /**
+     * Track Git scenario completion achievements
+     */
+    public void trackGitScenarioCompletion(Long userId, String scenarioLevel, String scenarioCategory, boolean usedHints, boolean perfectScore, long completionTimeMinutes) {
+        // Basic completion achievements
+        progressAchievement(userId, "GIT_FIRST_STEPS", 1);
+        progressAchievement(userId, "GIT_PERSISTENT", 1);
+        
+        // Level-specific achievements
+        switch (scenarioLevel.toUpperCase()) {
+            case "BEGINNER":
+                progressAchievement(userId, "GIT_BEGINNER", 1);
+                progressAchievement(userId, "GIT_BASICS_MASTER", 1);
+                break;
+            case "INTERMEDIATE":
+            case "ADVANCED":
+                progressAchievement(userId, "GIT_ADVANCED_USER", 1);
+                break;
+        }
+        
+        // Category-specific achievements
+        switch (scenarioCategory.toUpperCase()) {
+            case "BRANCHING":
+                progressAchievement(userId, "GIT_BRANCHING_PRO", 1);
+                break;
+            case "MERGING":
+                progressAchievement(userId, "GIT_MERGE_MASTER", 1);
+                break;
+            case "CONFLICTS":
+                progressAchievement(userId, "GIT_CONFLICT_RESOLVER", 1);
+                break;
+            case "COLLABORATION":
+                progressAchievement(userId, "GIT_WORKFLOW_EXPERT", 1);
+                break;
+        }
+        
+        // Performance-based achievements
+        if (!usedHints) {
+            progressAchievement(userId, "GIT_EFFICIENT", 1);
+        }
+        
+        if (perfectScore) {
+            progressAchievement(userId, "GIT_PERFECTIONIST", 1);
+        }
+        
+        if (completionTimeMinutes <= 5) {
+            progressAchievement(userId, "GIT_SPEED_DEMON", 1);
+        }
+        
+        // Overall mastery
+        progressAchievement(userId, "GIT_GURU", 1);
+    }
+    
+    /**
+     * Track Git hint usage
+     */
+    public void trackGitHintUsage(Long userId) {
+        progressAchievement(userId, "GIT_HELP_SEEKER", 1);
+    }
+    
+    /**
+     * Track Git command usage
+     */
+    public void trackGitCommandUsage(Long userId, String command) {
+        progressAchievement(userId, "GIT_EXPERIMENTER", 1);
+        
+        // Track specific commands for command master achievement
+        String[] masterCommands = {"init", "add", "commit", "push", "pull", "merge"};
+        for (String masterCommand : masterCommands) {
+            if (command.toLowerCase().contains(masterCommand)) {
+                progressAchievement(userId, "GIT_COMMAND_MASTER", 1);
+                break;
+            }
+        }
+    }
+    
+    /**
+     * Track daily Git learning consistency
+     */
+    public void trackDailyGitLearning(Long userId) {
+        progressAchievement(userId, "GIT_DAILY_LEARNER", 1);
+        progressAchievement(userId, "GIT_DEDICATED", 1);
+    }
 } 
