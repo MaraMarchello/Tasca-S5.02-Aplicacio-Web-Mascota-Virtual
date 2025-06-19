@@ -14,7 +14,6 @@ import com.codemate.service.ShopService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,7 +22,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestController
 @RequestMapping("/api/shop")
-@PreAuthorize("hasRole('USER')")
 public class ShopController {
     
     private final ShopService shopService;
