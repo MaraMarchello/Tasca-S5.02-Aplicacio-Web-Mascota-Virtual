@@ -1,5 +1,6 @@
 package com.codemate.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -46,6 +47,7 @@ public class Pet {
     
     // Simplified - only owned items (no complex inventory)
     @OneToMany(mappedBy = "pet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
     private Set<PetItem> items = new HashSet<>();
     
     @PrePersist

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -26,7 +27,9 @@ public class UserController {
         userInfo.put("id", userPrincipal.getId());
         userInfo.put("name", userPrincipal.getName());
         userInfo.put("email", userPrincipal.getUsername()); // email is stored in username
-        userInfo.put("authorities", userPrincipal.getAuthorities());
+        userInfo.put("authorities", userPrincipal.getAuthorities().stream()
+                .map(authority -> authority.getAuthority())
+                .collect(java.util.stream.Collectors.toList()));
         
         return ResponseEntity.ok(userInfo);
     }

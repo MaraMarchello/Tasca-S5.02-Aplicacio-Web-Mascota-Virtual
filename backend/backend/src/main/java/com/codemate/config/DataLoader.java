@@ -64,22 +64,41 @@ public class DataLoader implements CommandLineRunner {
      * These users can be used to test the login functionality
      */
     private void createTestUserIfNotExists() {
-        // Create admin user
-        if (!userRepository.existsByEmail("admin@codemate.com")) {
-            User adminUser = new User();
+        // Create or fix admin user
+        User adminUser = userRepository.findByEmail("admin@codemate.com").orElse(null);
+        Role adminRole = roleRepository.findByName(RoleType.ROLE_ADMIN)
+                .orElseThrow(() -> new RuntimeException("Admin Role not found"));
+        Role userRole = roleRepository.findByName(RoleType.ROLE_USER)
+                .orElseThrow(() -> new RuntimeException("User Role not found"));
+        
+        if (adminUser == null) {
+            // Create new admin user with both ADMIN and USER roles
+            adminUser = new User();
             adminUser.setName("Admin User");
             adminUser.setEmail("admin@codemate.com");
             adminUser.setPassword(passwordEncoder.encode("password123"));
             adminUser.setProvider("local");
             adminUser.setEnabled(true);
-            
-            // Assign ADMIN role
-            Role adminRole = roleRepository.findByName(RoleType.ROLE_ADMIN)
-                    .orElseThrow(() -> new RuntimeException("Admin Role not found"));
-            adminUser.setRoles(Collections.singleton(adminRole));
-            
+            // Admin users should have both ADMIN and USER roles
+            adminUser.getRoles().add(adminRole);
+            adminUser.getRoles().add(userRole);
             userRepository.save(adminUser);
-            log.info("Created admin user: admin@codemate.com");
+            log.info("Created admin user: admin@codemate.com with ADMIN and USER roles");
+        } else {
+            // Check if admin user has both required roles, if not, fix it
+            boolean hasAdminRole = adminUser.getRoles().stream()
+                    .anyMatch(role -> role.getName() == RoleType.ROLE_ADMIN);
+            boolean hasUserRole = adminUser.getRoles().stream()
+                    .anyMatch(role -> role.getName() == RoleType.ROLE_USER);
+            
+            if (!hasAdminRole || !hasUserRole) {
+                log.warn("Admin user exists but doesn't have required roles. Fixing...");
+                adminUser.getRoles().clear(); // Clear existing roles
+                adminUser.getRoles().add(adminRole); // Add ADMIN role
+                adminUser.getRoles().add(userRole);  // Add USER role
+                userRepository.save(adminUser);
+                log.info("Fixed admin user roles: admin@codemate.com now has both ADMIN and USER roles");
+            }
         }
 
         // Create regular user
@@ -92,8 +111,6 @@ public class DataLoader implements CommandLineRunner {
             regularUser.setEnabled(true);
             
             // Assign USER role
-            Role userRole = roleRepository.findByName(RoleType.ROLE_USER)
-                    .orElseThrow(() -> new RuntimeException("User Role not found"));
             regularUser.setRoles(Collections.singleton(userRole));
             
             userRepository.save(regularUser);

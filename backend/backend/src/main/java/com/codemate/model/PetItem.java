@@ -1,5 +1,6 @@
 package com.codemate.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,6 +19,7 @@ public class PetItem {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pet_id", nullable = false)
+    @JsonBackReference
     private Pet pet;
     
     @ManyToOne(fetch = FetchType.LAZY)

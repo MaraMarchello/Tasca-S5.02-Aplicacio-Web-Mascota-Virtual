@@ -67,6 +67,16 @@ const Dashboard: React.FC = () => {
     showSuccess('Navigating to your pet!');
   };
 
+  const handleNavigateToAchievements = () => {
+    navigate('/pet?tab=achievements');
+    showSuccess('Viewing your achievements!');
+  };
+
+  const handleNavigateToShop = () => {
+    navigate('/pet?tab=shop');
+    showSuccess('Welcome to the shop!');
+  };
+
   const handleNavigateToAdmin = () => {
     navigate('/admin');
   };
@@ -210,7 +220,7 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card variant="elevated" hover>
+          <Card variant="elevated" hover clickable onClick={handleNavigateToAchievements}>
             <CardHeader>
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center">
@@ -229,7 +239,7 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card variant="elevated" hover>
+          <Card variant="elevated" hover clickable onClick={handleNavigateToShop}>
             <CardHeader>
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center">

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 
 interface PetCharacterProps {
-  petType: 'CAT' | 'DOG' | 'BIRD' | 'FISH';
+  petType: 'CAT' | 'DOG' | 'BIRD' | 'FISH' | 'DUKE_JAVA' | 'COFFEE_BEAN';
   happiness: number;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   skin?: string;
@@ -240,9 +240,112 @@ const PetCharacter: React.FC<PetCharacterProps> = ({
     </svg>
   );
 
+  // Duke Java Character (based on Java mascot)
+  const DukeJavaCharacter = () => (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      {/* Duke's wizard hat */}
+      <path d="M20 35 L50 10 L80 35 L75 70 L25 70 Z" fill="#000" stroke="#333" strokeWidth="2"/>
+      
+      {/* Hat band */}
+      <ellipse cx="50" cy="35" rx="30" ry="3" fill="#333"/>
+      
+      {/* Duke's body (star-shaped) */}
+      <path d="M50 30 L60 45 L75 45 L65 55 L70 70 L50 60 L30 70 L35 55 L25 45 L40 45 Z" 
+            fill="#F5F5F5" stroke="#333" strokeWidth="2"/>
+      
+      {/* Red nose/eye */}
+      <circle cx="50" cy="45" r="6" fill="#DC143C" stroke="#333" strokeWidth="1"/>
+      <circle cx="50" cy="43" r="2" fill="#FFF" opacity="0.8"/>
+      
+      {/* Duke's arms making heart gesture */}
+      <path d="M35 50 Q30 45 25 50 Q30 55 35 50" fill="#F5F5F5" stroke="#333" strokeWidth="1.5"/>
+      <path d="M65 50 Q70 45 75 50 Q70 55 65 50" fill="#F5F5F5" stroke="#333" strokeWidth="1.5"/>
+      
+      {/* Heart gesture hands */}
+      <path d="M40 52 Q45 47 50 52 Q55 47 60 52 Q55 57 50 62 Q45 57 40 52" 
+            fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round"/>
+      
+      {/* Coffee cup accessory (when happy) */}
+      {petEmotion === 'happy' && (
+        <g>
+          <rect x="75" y="40" width="8" height="10" fill="#8B4513" stroke="#333" strokeWidth="1"/>
+          <path d="M83 43 Q87 43 87 47 Q87 51 83 51" fill="none" stroke="#333" strokeWidth="1"/>
+          <line x1="77" y1="38" x2="81" y2="38" stroke="#666" strokeWidth="1"/>
+        </g>
+      )}
+      
+      {/* Java steam/magic sparkles */}
+      <circle cx="30" cy="25" r="1.5" fill="#FFD700" opacity="0.8"/>
+      <circle cx="70" cy="20" r="1" fill="#FFD700" opacity="0.8"/>
+      <circle cx="25" cy="30" r="1" fill="#FFD700" opacity="0.8"/>
+      
+      {/* Wizard hat tip curve */}
+      <path d="M50 10 Q45 5 40 15" stroke="#333" strokeWidth="1.5" fill="none"/>
+    </svg>
+  );
+
+  // Coffee Bean Character
+  const CoffeeBeanCharacter = () => (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      {/* Coffee bean body */}
+      <ellipse cx="50" cy="50" rx="20" ry="30" fill="#8B4513" stroke="#333" strokeWidth="2"/>
+      
+      {/* Coffee bean crack/line */}
+      <path d="M50 25 Q45 35 50 45 Q55 55 50 65 Q45 75 50 85" 
+            stroke="#654321" strokeWidth="3" fill="none" strokeLinecap="round"/>
+      
+      {/* Eyes */}
+      <circle cx="42" cy="40" r="3" fill="#000"/>
+      <circle cx="58" cy="40" r="3" fill="#000"/>
+      {petEmotion === 'happy' && (
+        <>
+          <circle cx="43" cy="39" r="1" fill="#fff"/>
+          <circle cx="59" cy="39" r="1" fill="#fff"/>
+        </>
+      )}
+      
+      {/* Mouth */}
+      {petEmotion === 'happy' && (
+        <path d="M44 55 Q50 60 56 55" stroke="#333" strokeWidth="2" fill="none"/>
+      )}
+      {petEmotion === 'sad' && (
+        <path d="M44 58 Q50 53 56 58" stroke="#333" strokeWidth="2" fill="none"/>
+      )}
+      
+      {/* Coffee bean shine */}
+      <ellipse cx="45" cy="35" rx="4" ry="8" fill="#A0522D" opacity="0.7"/>
+      
+      {/* Steam when excited */}
+      {petEmotion === 'excited' && (
+        <g>
+          <path d="M40 20 Q42 15 40 10" stroke="#DDD" strokeWidth="2" fill="none" opacity="0.8"/>
+          <path d="M50 18 Q52 13 50 8" stroke="#DDD" strokeWidth="2" fill="none" opacity="0.8"/>
+          <path d="M60 20 Q62 15 60 10" stroke="#DDD" strokeWidth="2" fill="none" opacity="0.8"/>
+        </g>
+      )}
+      
+      {/* Coffee aroma particles */}
+      <circle cx="35" cy="25" r="1" fill="#D2691E" opacity="0.6"/>
+      <circle cx="65" cy="30" r="1.5" fill="#D2691E" opacity="0.6"/>
+      <circle cx="30" cy="35" r="1" fill="#D2691E" opacity="0.6"/>
+    </svg>
+  );
+
   const getSkinColor = () => {
+    const getDefaultColor = () => {
+      switch (petType) {
+        case 'CAT': return '#FFA500';
+        case 'DOG': return '#D2691E';
+        case 'BIRD': return '#FFD700';
+        case 'FISH': return '#FF6347';
+        case 'DUKE_JAVA': return '#F5F5F5';
+        case 'COFFEE_BEAN': return '#8B4513';
+        default: return '#FFA500';
+      }
+    };
+
     const skinColors = {
-      default: petType === 'CAT' ? '#FFA500' : petType === 'DOG' ? '#D2691E' : petType === 'BIRD' ? '#FFD700' : '#FF6347',
+      default: getDefaultColor(),
       white: '#F5F5F5',
       black: '#2F2F2F',
       brown: '#8B4513',
@@ -258,6 +361,8 @@ const PetCharacter: React.FC<PetCharacterProps> = ({
       case 'DOG': return <DogCharacter />;
       case 'BIRD': return <BirdCharacter />;
       case 'FISH': return <FishCharacter />;
+      case 'DUKE_JAVA': return <DukeJavaCharacter />;
+      case 'COFFEE_BEAN': return <CoffeeBeanCharacter />;
       default: return <CatCharacter />;
     }
   };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { petApi, pointsApi, Pet, PointBalance } from '../utils/api';
 import Layout from '../components/layout/Layout';
 import PetCreation from '../components/PetCreation';
@@ -7,6 +8,7 @@ import Achievements from '../components/Achievements';
 import { EnhancedPetDisplay } from '../components/pet';
 
 const PetPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [pet, setPet] = useState<Pet | null>(null);
   const [pointBalance, setPointBalance] = useState<PointBalance>({
     currentBalance: 0,
@@ -14,7 +16,13 @@ const PetPage: React.FC = () => {
     totalSpent: 0
   });
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pet' | 'room' | 'shop' | 'achievements'>('pet');
+  const [activeTab, setActiveTab] = useState<'pet' | 'room' | 'shop' | 'achievements'>(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['pet', 'room', 'shop', 'achievements'].includes(tabParam)) {
+      return tabParam as 'pet' | 'room' | 'shop' | 'achievements';
+    }
+    return 'pet';
+  });
   const [dailyLoginChecked, setDailyLoginChecked] = useState(false);
 
   useEffect(() => {
@@ -80,6 +88,11 @@ const PetPage: React.FC = () => {
     setPointBalance(updatedBalance);
   };
 
+  const handleTabChange = (tab: 'pet' | 'room' | 'shop' | 'achievements') => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -125,7 +138,7 @@ const PetPage: React.FC = () => {
               <div className="border-b border-border-light dark:border-border-dark">
                 <nav className="-mb-px flex space-x-8">
                   <button
-                    onClick={() => setActiveTab('pet')}
+                    onClick={() => handleTabChange('pet')}
                     className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                       activeTab === 'pet'
                         ? 'border-primary-500 text-primary-600 dark:text-primary-400'
@@ -135,7 +148,7 @@ const PetPage: React.FC = () => {
                     🐾 My Pet
                   </button>
                   <button
-                    onClick={() => setActiveTab('room')}
+                    onClick={() => handleTabChange('room')}
                     className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                       activeTab === 'room'
                         ? 'border-primary-500 text-primary-600 dark:text-primary-400'
@@ -145,7 +158,7 @@ const PetPage: React.FC = () => {
                     🏠 Pet Room
                   </button>
                   <button
-                    onClick={() => setActiveTab('shop')}
+                    onClick={() => handleTabChange('shop')}
                     className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                       activeTab === 'shop'
                         ? 'border-primary-500 text-primary-600 dark:text-primary-400'
@@ -155,7 +168,7 @@ const PetPage: React.FC = () => {
                     🛒 Shop
                   </button>
                   <button
-                    onClick={() => setActiveTab('achievements')}
+                    onClick={() => handleTabChange('achievements')}
                     className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                       activeTab === 'achievements'
                         ? 'border-primary-500 text-primary-600 dark:text-primary-400'
