@@ -14,6 +14,7 @@ import com.codemate.repository.UserRepository;
 import com.codemate.security.JwtTokenProvider;
 import com.codemate.security.UserPrincipal;
 import com.codemate.service.PointAwardHelper;
+import com.codemate.service.AchievementService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -40,6 +41,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
     private final PointAwardHelper pointAwardHelper;
+    private final AchievementService achievementService;
 
     public AuthController(
             AuthenticationManager authenticationManager,
@@ -47,13 +49,15 @@ public class AuthController {
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
             JwtTokenProvider tokenProvider,
-            PointAwardHelper pointAwardHelper) {
+            PointAwardHelper pointAwardHelper,
+            AchievementService achievementService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
         this.pointAwardHelper = pointAwardHelper;
+        this.achievementService = achievementService;
     }
 
     /**
@@ -77,12 +81,22 @@ public class AuthController {
             // Get user details for response
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             
-            // Award daily login points (async operation, won't fail login if it fails)
+            // Award daily login points and track achievements (async operation, won't fail login if it fails)
             try {
                 pointAwardHelper.awardDailyLoginPoints(userPrincipal.getId());
-                log.debug("Daily login points check completed for user: {}", userPrincipal.getId());
+                
+                // Track first login and time-based achievements
+                achievementService.trackFirstLogin(userPrincipal.getId());
+                
+                // Track time-based achievements
+                java.time.LocalDateTime now = java.time.LocalDateTime.now();
+                int hourOfDay = now.getHour();
+                boolean isWeekend = now.getDayOfWeek().getValue() >= 6;
+                achievementService.trackTimeBasedActivity(userPrincipal.getId(), hourOfDay, isWeekend);
+                
+                log.debug("Daily login points and achievements check completed for user: {}", userPrincipal.getId());
             } catch (Exception e) {
-                log.warn("Failed to award daily login points for user: {}, error: {}", loginRequest.getEmail(), e.getMessage());
+                log.warn("Failed to award daily login points or track achievements for user: {}, error: {}", loginRequest.getEmail(), e.getMessage());
                 // Don't fail the login process if point awarding fails
             }
 

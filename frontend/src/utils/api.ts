@@ -66,21 +66,22 @@ interface PetItem {
 
 interface Achievement {
   id: number;
+  code: string;
   name: string;
   description: string;
-  iconUrl?: string;
-  requiredValue: number;
-  type: string;
+  targetValue: number;
+  pointsReward: number;
+  badgeImageUrl?: string;
+  active: boolean;
 }
 
 interface UserAchievement {
   id: number;
   achievement: Achievement;
   currentProgress: number;
-  isCompleted: boolean;
+  completed: boolean;
   completedAt?: string;
   createdAt: string;
-  updatedAt: string;
 }
 
 interface PointTransaction {
@@ -295,8 +296,8 @@ export const achievementApi = {
     return apiCall<ApiResponse<UserAchievement[]>>('/achievements/my-achievements');
   },
 
-  getAllAchievements: async (): Promise<ApiResponse<Achievement[]>> => {
-    return apiCall<ApiResponse<Achievement[]>>('/achievements/all');
+  getAvailableAchievements: async (): Promise<ApiResponse<Achievement[]>> => {
+    return apiCall<ApiResponse<Achievement[]>>('/achievements/available');
   },
 };
 

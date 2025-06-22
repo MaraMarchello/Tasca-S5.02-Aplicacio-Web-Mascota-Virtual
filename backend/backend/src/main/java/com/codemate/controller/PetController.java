@@ -9,6 +9,7 @@ import com.codemate.payload.response.PetResponse;
 import com.codemate.security.CurrentUser;
 import com.codemate.security.UserPrincipal;
 import com.codemate.service.PetService;
+import com.codemate.service.AchievementService;
 
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -24,9 +25,11 @@ import java.util.Optional;
 public class PetController {
     
     private final PetService petService;
+    private final AchievementService achievementService;
     
-    public PetController(PetService petService) {
+    public PetController(PetService petService, AchievementService achievementService) {
         this.petService = petService;
+        this.achievementService = achievementService;
     }
     
     @PostMapping
@@ -64,6 +67,11 @@ public class PetController {
         log.debug("Feeding pet for user ID: {}", userPrincipal.getId());
         
         Pet pet = petService.feedPet(userPrincipal.getId());
+        
+        // Track pet interaction and happiness achievements
+        achievementService.trackPetInteraction(userPrincipal.getId());
+        achievementService.trackPetHappiness(userPrincipal.getId(), pet.getHappiness());
+        
         PetResponse response = convertToPetResponse(pet);
         
         return ResponseEntity.ok(DataResponse.success("Pet fed successfully", response));
@@ -78,6 +86,10 @@ public class PetController {
                 userPrincipal.getId(), request.getName());
         
         Pet pet = petService.updatePetName(userPrincipal.getId(), request.getName());
+        
+        // Track pet naming achievement
+        achievementService.trackPetNaming(userPrincipal.getId());
+        
         PetResponse response = convertToPetResponse(pet);
         
         return ResponseEntity.ok(DataResponse.success("Pet name updated successfully", response));
