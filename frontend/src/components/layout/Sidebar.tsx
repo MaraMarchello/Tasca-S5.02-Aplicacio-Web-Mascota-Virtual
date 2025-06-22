@@ -71,6 +71,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, user }) => {
         </svg>
       ),
     },
+
     {
       id: 'stack-trace',
       label: 'Stack Trace Explainer',

@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @Transactional
@@ -24,6 +26,7 @@ public class PetService {
     private final UserRepository userRepository;
     private final PointTransactionService pointTransactionService;
     private final AchievementService achievementService;
+    private static final Logger log = LoggerFactory.getLogger(PetService.class);
     
     public PetService(PetRepository petRepository,
                      UserRepository userRepository,
@@ -161,6 +164,29 @@ public class PetService {
             throw new ResourceNotFoundException("Pet", "id", petId);
         }
         petRepository.deleteById(petId);
+    }
+    
+    /**
+     * Delete user's own pet (with ownership validation)
+     */
+    public void deleteMyPet(Long userId) {
+        Pet pet = getPetByUserId(userId)
+            .orElseThrow(() -> PetNotFoundException.forUser(userId));
+        
+        // Additional validation to ensure user owns the pet
+        if (!pet.getOwner().getId().equals(userId)) {
+            throw new BadRequestException("You can only delete your own pet");
+        }
+        
+        // Log the deletion for audit purposes
+        log.info("User {} is deleting their pet: {} (ID: {})", 
+                userId, pet.getName(), pet.getId());
+        
+        // Delete the pet (PetItems will be cascade deleted due to CascadeType.ALL)
+        petRepository.delete(pet);
+        
+        log.info("Pet {} (ID: {}) successfully deleted for user {}", 
+                pet.getName(), pet.getId(), userId);
     }
     
     /**

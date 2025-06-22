@@ -2,6 +2,7 @@ package com.codemate.controller;
 
 import com.codemate.model.Pet;
 import com.codemate.payload.DataResponse;
+import com.codemate.payload.ApiResponse;
 import com.codemate.payload.request.CreatePetRequest;
 import com.codemate.payload.request.UpdatePetNameRequest;
 import com.codemate.payload.response.PetResponse;
@@ -88,6 +89,16 @@ public class PetController {
         log.debug("Getting available pet types");
         
         return ResponseEntity.ok(DataResponse.success(com.codemate.model.PetType.values()));
+    }
+    
+    @DeleteMapping("/my-pet")
+    public ResponseEntity<ApiResponse> deleteMyPet(@CurrentUser UserPrincipal userPrincipal) {
+        
+        log.debug("Deleting pet for user ID: {}", userPrincipal.getId());
+        
+        petService.deleteMyPet(userPrincipal.getId());
+        
+        return ResponseEntity.ok(new ApiResponse(true, "Pet deleted successfully"));
     }
     
     // Helper method to convert Pet entity to PetResponse

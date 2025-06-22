@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { petApi, Pet } from '../utils/api';
+import { PetCharacter } from './pet';
+import { getPetImage } from '../utils/petUtils';
+
 
 interface PetCreationProps {
   onPetCreated: (pet: Pet) => void;
@@ -7,13 +10,14 @@ interface PetCreationProps {
 
 const PetCreation: React.FC<PetCreationProps> = ({ onPetCreated }) => {
   const [petName, setPetName] = useState('');
-  const [petType, setPetType] = useState('DUKE_JAVA');
+  const [petType, setPetType] = useState<'DUKE_JAVA' | 'COFFEE_BEAN' | 'CODEMATE_MASCOT'>('CODEMATE_MASCOT');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState('');
 
   const petTypes = [
-    { value: 'DUKE_JAVA', label: 'Duke Java', emoji: '☕', description: 'A coffee-loving companion' },
-    { value: 'COFFEE_BEAN', label: 'Coffee Bean', emoji: '🫘', description: 'A cute little bean' }
+    { value: 'CODEMATE_MASCOT' as const, label: 'CodeMate Mascot', emoji: '🤖', description: 'The official CodeMate mascot' },
+    { value: 'DUKE_JAVA' as const, label: 'Duke Java', emoji: '☕', description: 'A coffee-loving companion' },
+    { value: 'COFFEE_BEAN' as const, label: 'Coffee Bean', emoji: '🫘', description: 'A cute little bean' }
   ];
 
   const handleCreatePet = async (e: React.FormEvent) => {
@@ -90,12 +94,20 @@ const PetCreation: React.FC<PetCreationProps> = ({ onPetCreated }) => {
                   name="petType"
                   value={type.value}
                   checked={petType === type.value}
-                  onChange={(e) => setPetType(e.target.value)}
+                  onChange={(e) => setPetType(e.target.value as 'DUKE_JAVA' | 'COFFEE_BEAN' | 'CODEMATE_MASCOT')}
                   className="sr-only"
                   disabled={isCreating}
                 />
                 <div className="flex items-center flex-1">
-                  <span className="text-3xl mr-3">{type.emoji}</span>
+                  <div className="mr-4 flex-shrink-0">
+                    <PetCharacter
+                      petType={type.value}
+                      emotion="happy"
+                      happiness={80}
+                      size="sm"
+                      customImage={getPetImage(type.value, 80)}
+                    />
+                  </div>
                   <div>
                     <div className="font-medium text-gray-800">{type.label}</div>
                     <div className="text-sm text-gray-600">{type.description}</div>

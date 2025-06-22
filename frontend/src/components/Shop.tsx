@@ -43,7 +43,7 @@ const Shop: React.FC<ShopProps> = ({ pointBalance, onPointsUpdate, onPetUpdate }
   };
 
   const handlePurchase = async (itemId: number, price: number) => {
-    if (pointBalance.currentBalance < price) {
+    if ((pointBalance?.currentBalance || 0) < price) {
       setMessage('Not enough points to purchase this item!');
       setTimeout(() => setMessage(''), 3000);
       return;
@@ -145,7 +145,7 @@ const Shop: React.FC<ShopProps> = ({ pointBalance, onPointsUpdate, onPetUpdate }
       <div className="border-b border-gray-200">
         <div className="p-4">
           <h2 className="text-xl font-bold text-gray-800">Pet Shop</h2>
-          <p className="text-sm text-gray-600">Current Points: <span className="font-semibold text-green-600">{pointBalance.currentBalance}</span></p>
+          <p className="text-sm text-gray-600">Current Points: <span className="font-semibold text-green-600">{pointBalance?.currentBalance || 0}</span></p>
         </div>
         
         {/* Tabs */}
@@ -212,11 +212,11 @@ const Shop: React.FC<ShopProps> = ({ pointBalance, onPointsUpdate, onPetUpdate }
                     <div className="text-lg font-bold text-blue-600">{item.price} pts</div>
                     <button
                       onClick={() => handlePurchase(item.id, item.price)}
-                      disabled={purchasing === item.id || pointBalance.currentBalance < item.price}
+                      disabled={purchasing === item.id || (pointBalance?.currentBalance || 0) < item.price}
                       className={`mt-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                         purchasing === item.id
                           ? 'bg-gray-300 cursor-not-allowed'
-                          : pointBalance.currentBalance < item.price
+                          : (pointBalance?.currentBalance || 0) < item.price
                           ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                           : 'bg-blue-500 hover:bg-blue-600 text-white'
                       }`}

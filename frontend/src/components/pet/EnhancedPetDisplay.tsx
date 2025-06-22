@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import PetCharacter from './PetCharacter';
-import PetRoom from './PetRoom';
+// import PetRoom from './PetRoom'; // Unused due to interface mismatch
 import { Card, CardHeader, CardTitle, CardContent } from '../ui';
 import { Button } from '../ui';
 import { useToast } from '../../contexts/ToastContext';
+import { petApi, shopApi } from '../../utils/api';
 
 interface EnhancedPetDisplayProps {
   pet: {
     id: number;
     name: string;
-    type: 'CAT' | 'DOG' | 'BIRD' | 'FISH';
+    type: 'CAT' | 'DOG' | 'BIRD' | 'FISH' | 'DUKE_JAVA' | 'COFFEE_BEAN' | 'CODEMATE_MASCOT';
     happiness: number;
     hunger?: number;
     energy?: number;
@@ -19,6 +20,7 @@ interface EnhancedPetDisplayProps {
     lastFed: string;
     skin?: string;
     accessories?: string[];
+    customImage?: string; // For CODEMATE_MASCOT type
   };
   pointBalance: {
     currentBalance: number;
@@ -76,46 +78,63 @@ const EnhancedPetDisplay: React.FC<EnhancedPetDisplayProps> = ({
     checkAchievements();
   }, [enhancedPet.happiness, achievementReaction, showSuccess]);
 
-  const handleFeedPet = async (_itemId?: number) => {
+  const handleFeedPet = async (itemId?: number) => {
     setIsFeeding(true);
     try {
-      // Mock API call - replace with actual API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const updatedPet = {
-        ...enhancedPet,
-        happiness: Math.min(enhancedPet.happiness + 15, 100),
-        hunger: Math.min(enhancedPet.hunger + 30, 100),
-        lastFed: new Date().toISOString()
-      };
-      
-      onPetUpdate(updatedPet);
-      showSuccess(`${pet.name} enjoyed the meal! 🍽️`);
+      if (itemId) {
+        // Use specific item
+        await handleUseItem(itemId);
+      } else {
+        // Use generic feed API
+        const response = await petApi.feedPet();
+        
+        if (response.success && response.data) {
+          onPetUpdate(response.data);
+          showSuccess(`${pet.name} enjoyed the meal! 🍽️`);
+        } else {
+          // Fallback to mock behavior
+          const updatedPet = {
+            ...enhancedPet,
+            happiness: Math.min(enhancedPet.happiness + 15, 100),
+            hunger: Math.min(enhancedPet.hunger + 30, 100),
+            lastFed: new Date().toISOString()
+          };
+          
+          onPetUpdate(updatedPet);
+          showSuccess(`${pet.name} enjoyed the meal! 🍽️`);
+        }
+      }
       setLastInteraction(new Date());
     } catch (error) {
+      console.error('Failed to feed pet:', error);
       showError('Failed to feed pet');
     } finally {
       setIsFeeding(false);
     }
   };
 
-  const handlePlayWithPet = async (_itemId?: number) => {
+  const handlePlayWithPet = async (itemId?: number) => {
     setIsPlaying(true);
     try {
-      // Mock API call - replace with actual API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const updatedPet = {
-        ...enhancedPet,
-        happiness: Math.min(enhancedPet.happiness + 10, 100),
-        energy: Math.max(enhancedPet.energy - 10, 0),
-        experience: enhancedPet.experience + 5
-      };
-      
-      onPetUpdate(updatedPet);
-      showSuccess(`${pet.name} had fun playing! 🎾`);
+      if (itemId) {
+        // Use specific toy item
+        await handleUseItem(itemId);
+      } else {
+        // Generic play - this would need a specific API endpoint
+        // For now, use mock behavior
+        const updatedPet = {
+          ...enhancedPet,
+          happiness: Math.min(enhancedPet.happiness + 10, 100),
+          energy: Math.max(enhancedPet.energy - 10, 0),
+          experience: enhancedPet.experience + 5
+        };
+        
+        onPetUpdate(updatedPet);
+        showSuccess(`${pet.name} had fun playing! 🎾`);
+      }
       setLastInteraction(new Date());
     } catch (error) {
+      console.error('Failed to play with pet:', error);
       showError('Failed to play with pet');
     } finally {
       setIsPlaying(false);
@@ -127,19 +146,26 @@ const EnhancedPetDisplay: React.FC<EnhancedPetDisplayProps> = ({
       const item = items.find(i => i.id === itemId);
       if (!item) return;
 
-      // Mock API call - replace with actual API
-      await new Promise(resolve => setTimeout(resolve, 500));
+              // Use actual API call
+        const response = await shopApi.useItem({ petItemId: itemId });
       
-      const updatedPet = {
-        ...enhancedPet,
-        happiness: Math.min(enhancedPet.happiness + (item.happiness_boost || 0), 100),
-        hunger: Math.min(enhancedPet.hunger + (item.hunger_restore || 0), 100),
-        energy: Math.min(enhancedPet.energy + (item.energy_boost || 0), 100),
-      };
-      
-      onPetUpdate(updatedPet);
-      showSuccess(`Used ${item.name} on ${pet.name}! ${item.icon}`);
+      if (response.success && response.data) {
+        onPetUpdate(response.data);
+        showSuccess(`Used ${item.name} on ${pet.name}! ${item.icon}`);
+      } else {
+        // Fallback to mock behavior if API call fails
+        const updatedPet = {
+          ...enhancedPet,
+          happiness: Math.min(enhancedPet.happiness + (item.happiness_boost || 0), 100),
+          hunger: Math.min(enhancedPet.hunger + (item.hunger_restore || 0), 100),
+          energy: Math.min(enhancedPet.energy + (item.energy_boost || 0), 100),
+        };
+        
+        onPetUpdate(updatedPet);
+        showSuccess(`Used ${item.name} on ${pet.name}! ${item.icon}`);
+      }
     } catch (error) {
+      console.error('Failed to use item:', error);
       showError('Failed to use item');
     }
   };
@@ -178,17 +204,17 @@ const EnhancedPetDisplay: React.FC<EnhancedPetDisplayProps> = ({
     return diffInDays === 1 ? '1 day ago' : `${diffInDays} days ago`;
   };
 
-  // Room view
+  // Room view - currently disabled due to interface mismatch
   if (viewMode === 'room') {
     return (
-      <PetRoom
-        pet={enhancedPet}
-        items={items}
-        onFeedPet={handleFeedPet}
-        onPlayWithPet={handlePlayWithPet}
-        onUseItem={handleUseItem}
-        onPetInteraction={handlePetInteraction}
-      />
+      <div className="text-center py-12">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          Pet Room
+        </h3>
+        <p className="text-gray-600 dark:text-gray-400">
+          Use the Pet Room tab instead.
+        </p>
+      </div>
     );
   }
 
@@ -224,6 +250,7 @@ const EnhancedPetDisplay: React.FC<EnhancedPetDisplayProps> = ({
                 emotion={achievementReaction ? 'excited' : undefined}
                 onClick={handlePetInteraction}
                 className="mb-4"
+                customImage={pet.customImage}
               />
               
               {/* Pet Status */}

@@ -1,105 +1,78 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { petApi, pointsApi, Pet, PointBalance } from '../utils/api';
 import Layout from '../components/layout/Layout';
 import PetCreation from '../components/PetCreation';
 import Shop from '../components/Shop';
 import Achievements from '../components/Achievements';
-import { EnhancedPetDisplay } from '../components/pet';
+import { PetHeader, PetTabs, PetInfo, PetRoomTab } from '../components/pet';
+import { usePetData } from '../hooks/usePetData';
 
 const PetPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [pet, setPet] = useState<Pet | null>(null);
-  const [pointBalance, setPointBalance] = useState<PointBalance>({
-    currentBalance: 0,
-    totalEarned: 0,
-    totalSpent: 0
-  });
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pet' | 'room' | 'shop' | 'achievements'>(() => {
+  const {
+    pet,
+    setPet,
+    pointBalance,
+    petItems,
+    loading,
+    error,
+    loadPetData,
+    checkDailyLogin,
+    handlePetCreated,
+    handlePointsUpdate,
+    handleFeedPet,
+    handleAwardTestPoints,
+    handleDeletePet
+  } = usePetData();
+
+  const [activeTab, setActiveTab] = React.useState<'pet' | 'room' | 'shop' | 'achievements'>(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam && ['pet', 'room', 'shop', 'achievements'].includes(tabParam)) {
       return tabParam as 'pet' | 'room' | 'shop' | 'achievements';
     }
     return 'pet';
   });
-  const [dailyLoginChecked, setDailyLoginChecked] = useState(false);
-
-  useEffect(() => {
-    loadPetData();
-    checkDailyLogin();
-  }, []);
-
-  const loadPetData = async () => {
-    setLoading(true);
-    try {
-      const [petResponse, balanceResponse] = await Promise.all([
-        petApi.getUserPet(),
-        pointsApi.getBalance()
-      ]);
-
-      if (petResponse.success && petResponse.data) {
-        setPet(petResponse.data);
-      }
-
-      if (balanceResponse.success && balanceResponse.data) {
-        setPointBalance(balanceResponse.data);
-      }
-    } catch (error) {
-      console.error('Failed to load pet data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const checkDailyLogin = async () => {
-    if (dailyLoginChecked) return;
-    
-    try {
-      const response = await pointsApi.checkDailyLogin();
-      if (response.success && response.data) {
-        // User got daily login bonus
-        setPointBalance(prev => ({
-          ...prev,
-          currentBalance: prev.currentBalance + response.data!.amount,
-          totalEarned: prev.totalEarned + response.data!.amount
-        }));
-        
-        // Show a notification or toast here if needed
-        console.log('Daily login bonus received!', response.data.amount, 'points');
-      }
-    } catch (error) {
-      console.error('Failed to check daily login:', error);
-    } finally {
-      setDailyLoginChecked(true);
-    }
-  };
-
-  const handlePetCreated = (newPet: Pet) => {
-    setPet(newPet);
-    loadPetData(); // Refresh all data
-  };
-
-  const handlePetUpdate = (updatedPet: Pet) => {
-    setPet(updatedPet);
-  };
-
-  const handlePointsUpdate = (updatedBalance: PointBalance) => {
-    setPointBalance(updatedBalance);
-  };
 
   const handleTabChange = (tab: 'pet' | 'room' | 'shop' | 'achievements') => {
+    console.log('📱 Tab changed to:', tab);
     setActiveTab(tab);
     setSearchParams({ tab });
   };
 
+  // Error state
+  if (error) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center space-y-4 max-w-2xl">
+            <div className="text-red-500 text-6xl">⚠️</div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Something went wrong</h2>
+            <p className="text-gray-600 dark:text-gray-400">{error}</p>
+            <button
+              onClick={() => {
+                loadPetData();
+              }}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Loading state
   if (loading) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-[50vh]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
             <p className="mt-4 text-gray-600 dark:text-gray-400">Loading your pet...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-500">
+              If this takes too long, try refreshing the page
+            </p>
           </div>
         </div>
       </Layout>
@@ -110,21 +83,12 @@ const PetPage: React.FC = () => {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">🐾 My Pet</h1>
-            {pet && (
-              <div className="flex items-center space-x-4 text-sm">
-                <span className="px-3 py-1 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded-full">
-                  {pet.name}
-                </span>
-                <span className="px-3 py-1 bg-secondary-100 dark:bg-secondary-900 text-secondary-700 dark:text-secondary-300 rounded-full">
-                  💰 {pointBalance.currentBalance} points
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
+        <PetHeader 
+          pet={pet} 
+          pointBalance={pointBalance} 
+          onAwardTestPoints={handleAwardTestPoints} 
+        />
+
         {!pet ? (
           /* Pet Creation */
           <div className="max-w-md mx-auto">
@@ -134,83 +98,40 @@ const PetPage: React.FC = () => {
           /* Main Pet Interface */
           <div>
             {/* Navigation Tabs */}
-            <div className="mb-8">
-              <div className="border-b border-border-light dark:border-border-dark">
-                <nav className="-mb-px flex space-x-8">
-                  <button
-                    onClick={() => handleTabChange('pet')}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      activeTab === 'pet'
-                        ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}
-                  >
-                    🐾 My Pet
-                  </button>
-                  <button
-                    onClick={() => handleTabChange('room')}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      activeTab === 'room'
-                        ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}
-                  >
-                    🏠 Pet Room
-                  </button>
-                  <button
-                    onClick={() => handleTabChange('shop')}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      activeTab === 'shop'
-                        ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}
-                  >
-                    🛒 Shop
-                  </button>
-                  <button
-                    onClick={() => handleTabChange('achievements')}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      activeTab === 'achievements'
-                        ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}
-                  >
-                    🏆 Achievements
-                  </button>
-                </nav>
-              </div>
-            </div>
+            <PetTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
             {/* Tab Content */}
             <div>
               {activeTab === 'pet' && (
-                <EnhancedPetDisplay
-                  pet={pet as any}
+                <PetInfo
+                  pet={pet}
                   pointBalance={pointBalance}
-                  onPetUpdate={handlePetUpdate}
-                  onPointsUpdate={handlePointsUpdate}
-                  viewMode="card"
+                  petItems={petItems}
+                  onPetUpdate={setPet}
+                  onFeedPet={handleFeedPet}
+                  onAwardTestPoints={handleAwardTestPoints}
+                  onLoadPetData={loadPetData}
+                  onCheckDailyLogin={checkDailyLogin}
+                  onDeletePet={handleDeletePet}
                 />
               )}
-
+              
               {activeTab === 'room' && (
-                <EnhancedPetDisplay
-                  pet={pet as any}
-                  pointBalance={pointBalance}
-                  onPetUpdate={handlePetUpdate}
-                  onPointsUpdate={handlePointsUpdate}
-                  viewMode="room"
+                <PetRoomTab
+                  pet={pet}
+                  petItems={petItems}
+                  onFeedPet={handleFeedPet}
+                  onLoadPetData={loadPetData}
                 />
               )}
-
+              
               {activeTab === 'shop' && (
                 <Shop
                   pointBalance={pointBalance}
                   onPointsUpdate={handlePointsUpdate}
-                  onPetUpdate={handlePetUpdate}
                 />
               )}
-
+              
               {activeTab === 'achievements' && (
                 <Achievements />
               )}

@@ -229,15 +229,21 @@ export const petApi = {
   },
 
   updatePetName: async (request: UpdatePetNameRequest): Promise<ApiResponse<Pet>> => {
-    return apiCall<ApiResponse<Pet>>('/pets/name', {
+    return apiCall<ApiResponse<Pet>>('/pets/my-pet/name', {
       method: 'PUT',
       body: JSON.stringify(request),
     });
   },
 
   feedPet: async (): Promise<ApiResponse<Pet>> => {
-    return apiCall<ApiResponse<Pet>>('/pets/feed', {
+    return apiCall<ApiResponse<Pet>>('/pets/my-pet/feed', {
       method: 'POST',
+    });
+  },
+
+  deletePet: async (): Promise<ApiResponse<any>> => {
+    return apiCall<ApiResponse<any>>('/pets/my-pet', {
+      method: 'DELETE',
     });
   },
 
@@ -319,6 +325,22 @@ export const pointsApi = {
   checkDailyLogin: async (): Promise<ApiResponse<PointTransaction | null>> => {
     return apiCall<ApiResponse<PointTransaction | null>>('/points/daily-login', {
       method: 'POST',
+    });
+  },
+
+  // Debug/test function to manually award points
+  awardTestPoints: async (amount: number = 100): Promise<ApiResponse<any>> => {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      throw new Error('User not logged in');
+    }
+    return apiCall<ApiResponse<any>>('/admin/points/award', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId: parseInt(userId),
+        amount: amount,
+        description: `Test points award - ${amount} points`
+      }),
     });
   },
 };

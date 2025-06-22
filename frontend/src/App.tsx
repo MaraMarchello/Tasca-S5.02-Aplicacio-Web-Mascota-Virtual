@@ -9,6 +9,9 @@ import Pet from './pages/Pet';
 import AdminDashboard from './pages/AdminDashboard';
 import AIHelper from './pages/AIHelper';
 import GitCoach from './pages/GitCoach';
+import Shop from './pages/Shop';
+import Achievements from './pages/Achievements';
+import StackTrace from './pages/StackTrace';
 import './App.css';
 
 // Simple auth guard component
@@ -94,6 +97,30 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <GitCoach />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/shop" 
+                element={
+                  <ProtectedRoute>
+                    <Shop />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/achievements" 
+                element={
+                  <ProtectedRoute>
+                    <Achievements />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/stack-trace" 
+                element={
+                  <ProtectedRoute>
+                    <StackTrace />
                   </ProtectedRoute>
                 } 
               />

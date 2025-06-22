@@ -2,7 +2,8 @@ package com.codemate.model;
 
 public enum PetType {
     DUKE_JAVA("☕", "The classic Java mascot"),
-    COFFEE_BEAN("🫘", "An energetic coffee bean");
+    COFFEE_BEAN("🫘", "An energetic coffee bean"),
+    CODEMATE_MASCOT("🤖", "The official CodeMate mascot");
     
     private final String emoji;
     private final String description;

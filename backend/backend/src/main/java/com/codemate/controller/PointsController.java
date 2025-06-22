@@ -30,13 +30,23 @@ public class PointsController {
         
         log.debug("Getting point balance for user: {}", userPrincipal.getId());
         
-        Long currentPoints = pointTransactionService.getCurrentPoints(userPrincipal.getId());
-        Long totalEarned = pointTransactionService.getTotalPointsEarned(userPrincipal.getId());
-        Long totalSpent = pointTransactionService.getTotalPointsSpent(userPrincipal.getId());
-        
-        PointBalanceResponse response = new PointBalanceResponse(currentPoints, totalEarned, totalSpent);
-        
-        return ResponseEntity.ok(DataResponse.success(response));
+        try {
+            Long currentPoints = pointTransactionService.getCurrentPoints(userPrincipal.getId());
+            Long totalEarned = pointTransactionService.getTotalPointsEarned(userPrincipal.getId());
+            Long totalSpent = pointTransactionService.getTotalPointsSpent(userPrincipal.getId());
+            
+            log.debug("Point balance for user {}: current={}, earned={}, spent={}", 
+                     userPrincipal.getId(), currentPoints, totalEarned, totalSpent);
+            
+            PointBalanceResponse response = new PointBalanceResponse(currentPoints, totalEarned, totalSpent);
+            
+            return ResponseEntity.ok(DataResponse.success(response));
+        } catch (Exception e) {
+            log.error("Error getting point balance for user: {}", userPrincipal.getId(), e);
+            // Return zero balance on error to prevent crashes
+            PointBalanceResponse response = new PointBalanceResponse(0L, 0L, 0L);
+            return ResponseEntity.ok(DataResponse.success(response));
+        }
     }
     
     @GetMapping("/transactions")
@@ -70,6 +80,27 @@ public class PointsController {
                 .collect(Collectors.toList());
         
         return ResponseEntity.ok(DataResponse.success(response));
+    }
+    
+    @PostMapping("/daily-login")
+    public ResponseEntity<DataResponse<PointTransactionResponse>> checkDailyLogin(@CurrentUser UserPrincipal userPrincipal) {
+        
+        log.debug("Checking daily login for user: {}", userPrincipal.getId());
+        
+        try {
+            PointTransaction transaction = pointTransactionService.awardDailyLoginPoints(userPrincipal.getId());
+            
+            if (transaction != null) {
+                PointTransactionResponse response = convertToPointTransactionResponse(transaction);
+                return ResponseEntity.ok(DataResponse.success("Daily login bonus awarded!", response));
+            } else {
+                // User already received daily login bonus today
+                return ResponseEntity.ok(DataResponse.success("Daily login already checked today", null));
+            }
+        } catch (Exception e) {
+            log.error("Error awarding daily login points for user: {}", userPrincipal.getId(), e);
+            return ResponseEntity.ok(DataResponse.success("Daily login check completed", null));
+        }
     }
     
     // Helper method

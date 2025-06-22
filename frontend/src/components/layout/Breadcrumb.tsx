@@ -33,6 +33,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className }) => {
       'pet': 'My Pet',
       'ai-helper': 'AI Code Helper',
       'git-coach': 'Git Coach',
+
       'stack-trace': 'Stack Trace Explainer',
       'achievements': 'Achievements',
       'shop': 'Shop',
