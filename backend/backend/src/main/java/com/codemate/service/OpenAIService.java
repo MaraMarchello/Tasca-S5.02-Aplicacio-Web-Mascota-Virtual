@@ -7,6 +7,7 @@ import com.theokanning.openai.completion.chat.ChatMessage;
 import com.theokanning.openai.service.OpenAiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +22,10 @@ import java.util.regex.Pattern;
 public class OpenAIService {
 
     private final OpenAiService openAiClient;
-    private static final String GPT_MODEL = "gpt-4";
+    
+    @Value("${openai.api.model:gpt-3.5-turbo}")
+    private String gptModel;
+    
     private static final String SYSTEM_ROLE = "system";
     private static final String USER_ROLE = "user";
 
@@ -53,7 +57,7 @@ public class OpenAIService {
         messages.add(new ChatMessage(USER_ROLE, "Hello, this is a test message."));
 
         ChatCompletionRequest request = ChatCompletionRequest.builder()
-                .model(GPT_MODEL)
+                .model(gptModel)
                 .messages(messages)
                 .temperature(0.7)
                 .build();
@@ -90,7 +94,7 @@ public class OpenAIService {
         messages.add(new ChatMessage(USER_ROLE, query));
 
         ChatCompletionRequest request = ChatCompletionRequest.builder()
-                .model(GPT_MODEL)
+                .model(gptModel)
                 .messages(messages)
                 .temperature(0.7)
                 .build();
@@ -127,7 +131,7 @@ public class OpenAIService {
         messages.add(new ChatMessage(USER_ROLE, "Please explain this error and how to fix it:\n" + stackTrace));
 
         ChatCompletionRequest request = ChatCompletionRequest.builder()
-                .model(GPT_MODEL)
+                .model(gptModel)
                 .messages(messages)
                 .temperature(0.7)
                 .build();
@@ -164,7 +168,7 @@ public class OpenAIService {
         messages.add(new ChatMessage(USER_ROLE, "Please explain this Git error and how to resolve it:\n" + gitError));
 
         ChatCompletionRequest request = ChatCompletionRequest.builder()
-                .model(GPT_MODEL)
+                .model(gptModel)
                 .messages(messages)
                 .temperature(0.7)
                 .build();

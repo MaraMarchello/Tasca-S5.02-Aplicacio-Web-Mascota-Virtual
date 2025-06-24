@@ -12,12 +12,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class TestConfigController {
 
     private final String openaiApiKey;
+    private final String openaiModel;
     private final OpenAIService openAIService;
 
     public TestConfigController(
             @Value("${openai.api.key}") String openaiApiKey,
+            @Value("${openai.api.model:gpt-3.5-turbo}") String openaiModel,
             OpenAIService openAIService) {
         this.openaiApiKey = openaiApiKey;
+        this.openaiModel = openaiModel;
         this.openAIService = openAIService;
     }
 
@@ -28,9 +31,15 @@ public class TestConfigController {
         }
         
         // Only show the first few characters for security
-        String maskedKey = openaiApiKey.substring(0, 5) + "..." + 
-                          openaiApiKey.substring(openaiApiKey.length() - 5);
-        return ResponseEntity.ok("OpenAI API key is configured (starts with: " + maskedKey + ")");
+        String maskedKey = openaiApiKey.substring(0, Math.min(5, openaiApiKey.length())) + "..." + 
+                          openaiApiKey.substring(Math.max(0, openaiApiKey.length() - 5));
+        
+        return ResponseEntity.ok(String.format(
+            "OpenAI Configuration:\n" +
+            "- API Key: %s\n" +
+            "- Model: %s\n" +
+            "- Status: Ready", 
+            maskedKey, openaiModel));
     }
 
     @GetMapping("/connection")
