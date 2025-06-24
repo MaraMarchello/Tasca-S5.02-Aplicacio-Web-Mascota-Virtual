@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '../ui';
 import { useToast } from '../../contexts/ToastContext';
+import { aiApi, type AIAssistanceResponse } from '../../utils/api';
 
 interface Message {
   id: string;
@@ -75,139 +76,131 @@ const AIChat: React.FC<AIChatProps> = ({
     };
 
     setMessages(prev => [...prev, userMessage, loadingMessage]);
+    const currentInput = inputValue.trim();
     setInputValue('');
     setIsLoading(true);
 
     try {
-      // Mock AI response - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      let aiResponse: AIAssistanceResponse;
       
-      const response = generateMockResponse(userMessage.content);
+      // Determine the type of request based on content
+      if (isErrorMessage(currentInput)) {
+        // If it looks like a stack trace or error message
+        aiResponse = await aiApi.explainError(currentInput);
+      } else if (isGitError(currentInput)) {
+        // If it looks like a Git error
+        aiResponse = await aiApi.explainGitError(currentInput);
+      } else {
+        // General code assistance
+        const context = initialContext || getContextFromMessages();
+        aiResponse = await aiApi.getCodeAssistance(currentInput, context);
+      }
+      
+      // Format the AI response for display
+      const formattedResponse = formatAIResponse(aiResponse);
       
       setMessages(prev => prev.map(msg => 
         msg.id === loadingMessage.id 
-          ? { ...msg, content: response.content, isLoading: false }
+          ? { ...msg, content: formattedResponse.content, isLoading: false }
           : msg
       ));
 
       // Handle special responses
-      if (response.type === 'code' && onCodeGenerated) {
-        onCodeGenerated(response.code || '');
-      } else if (response.type === 'explanation' && onCodeExplained) {
-        onCodeExplained(response.content);
+      if (aiResponse.codeSnippet && onCodeGenerated) {
+        onCodeGenerated(aiResponse.codeSnippet);
+      }
+      
+      if (formattedResponse.isExplanation && onCodeExplained) {
+        onCodeExplained(formattedResponse.content);
       }
 
     } catch (error) {
-      showError('Failed to get AI response');
-      setMessages(prev => prev.filter(msg => msg.id !== loadingMessage.id));
+      console.error('AI API Error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Show user-friendly error message
+      showError(`AI Assistant Error: ${errorMessage}`);
+      
+      // Replace loading message with error message
+      setMessages(prev => prev.map(msg => 
+        msg.id === loadingMessage.id 
+          ? { 
+              ...msg, 
+              content: `I apologize, but I'm having trouble connecting to the AI service right now. Please try again in a moment.\n\nError: ${errorMessage}`,
+              isLoading: false 
+            }
+          : msg
+      ));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const generateMockResponse = (userInput: string) => {
-    const input = userInput.toLowerCase();
-    
-    if (input.includes('hello') || input.includes('hi')) {
-      return {
-        type: 'chat',
-        content: 'Hello! I\'m ready to help you with your Java programming. What would you like to work on?'
-      };
-    }
-    
-    if (input.includes('create') || input.includes('generate') || input.includes('write')) {
-      if (input.includes('class')) {
-        return {
-          type: 'code',
-          content: 'Here\'s a basic Java class structure:',
-          code: `public class MyClass {
-    private String name;
-    
-    public MyClass(String name) {
-        this.name = name;
-    }
-    
-    public String getName() {
-        return name;
-    }
-    
-    public void setName(String name) {
-        this.name = name;
-    }
-    
-    @Override
-    public String toString() {
-        return "MyClass{name='" + name + "'}";
-    }
-}`
-        };
-      }
-      
-      if (input.includes('method') || input.includes('function')) {
-        return {
-          type: 'code',
-          content: 'Here\'s a sample method:',
-          code: `public void exampleMethod(String parameter) {
-    System.out.println("Parameter received: " + parameter);
-    // Add your logic here
-}`
-        };
-      }
-    }
-    
-    if (input.includes('explain') || input.includes('what is') || input.includes('how')) {
-      return {
-        type: 'explanation',
-        content: `Great question! Let me explain:
+  // Helper functions for AI integration
+  const isErrorMessage = (input: string): boolean => {
+    const errorIndicators = [
+      'exception', 'error', 'stacktrace', 'stack trace', 
+      'at java.', 'at com.', 'at org.', 'caused by',
+      'nullpointerexception', 'classnotfoundexception',
+      'illegalargumentexception', 'indexoutofboundsexception'
+    ];
+    const lowerInput = input.toLowerCase();
+    return errorIndicators.some(indicator => lowerInput.includes(indicator)) ||
+           input.includes('\tat ') || // Stack trace line indicator
+           /\w+Exception/.test(input); // Any word ending with Exception
+  };
 
-**Java Concepts:**
-- **Classes**: Templates for creating objects
-- **Methods**: Functions that belong to a class
-- **Variables**: Store data values
-- **Inheritance**: Classes can inherit from other classes
-- **Polymorphism**: Objects can take multiple forms
+  const isGitError = (input: string): boolean => {
+    const gitErrorIndicators = [
+      'git:', 'fatal:', 'error:', 'merge conflict',
+      'git push', 'git pull', 'git merge', 'git rebase',
+      'remote:', 'branch', 'commit', 'repository'
+    ];
+    const lowerInput = input.toLowerCase();
+    return gitErrorIndicators.some(indicator => lowerInput.includes(indicator));
+  };
 
-**Best Practices:**
-- Use meaningful variable names
-- Follow camelCase naming convention
-- Keep methods focused on single tasks
-- Add comments for complex logic
+  const getContextFromMessages = (): string => {
+    // Get the last few messages as context (excluding system messages)
+    const recentMessages = messages
+      .filter(msg => msg.type !== 'system')
+      .slice(-5) // Last 5 messages
+      .map(msg => `${msg.type}: ${msg.content}`)
+      .join('\n');
+    return recentMessages;
+  };
 
-Would you like me to elaborate on any specific concept?`
-      };
+  const formatAIResponse = (response: AIAssistanceResponse): { content: string; isExplanation: boolean } => {
+    let content = '';
+    let isExplanation = false;
+
+    // Start with the main answer
+    if (response.answer) {
+      content += `**Answer:**\n${response.answer}\n\n`;
     }
-    
-    if (input.includes('debug') || input.includes('error') || input.includes('fix')) {
-      return {
-        type: 'chat',
-        content: `I'd be happy to help debug your code! Here are some common Java issues and solutions:
 
-**Common Errors:**
-1. **NullPointerException**: Check for null values before using objects
-2. **ArrayIndexOutOfBoundsException**: Verify array indices are within bounds
-3. **Compilation errors**: Check syntax, missing semicolons, unmatched braces
-
-**Debugging Tips:**
-- Use System.out.println() for simple debugging
-- Check variable values at different points
-- Verify method parameters and return types
-
-Please share your specific code or error message, and I'll provide targeted help!`
-      };
+    // Add explanation if available
+    if (response.explanation) {
+      content += `**Explanation:**\n${response.explanation}\n\n`;
+      isExplanation = true;
     }
-    
-    return {
-      type: 'chat',
-      content: `I understand you're asking about: "${userInput}"
 
-I can help you with:
-- **Code Generation**: Creating Java classes, methods, and snippets
-- **Code Explanation**: Breaking down complex concepts
-- **Debugging**: Finding and fixing issues
-- **Best Practices**: Writing clean, efficient code
+    // Add code snippet if available
+    if (response.codeSnippet) {
+      content += `**Code Example:**\n\`\`\`java\n${response.codeSnippet}\n\`\`\`\n\n`;
+    }
 
-What specific aspect would you like to explore?`
-    };
+    // Add references if available
+    if (response.references) {
+      content += `**References:**\n${response.references}`;
+    }
+
+    // If no structured response, just return the answer
+    if (!content.trim() && response.answer) {
+      content = response.answer;
+    }
+
+    return { content: content.trim(), isExplanation };
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -237,7 +230,29 @@ What specific aspect would you like to explore?`
           </div>
         ) : (
           <div className="whitespace-pre-wrap text-sm leading-relaxed">
-            {message.content}
+            {/* Basic markdown-like formatting for code blocks */}
+            {message.content.split('```').map((part, index) => {
+              if (index % 2 === 1) {
+                // This is a code block
+                const lines = part.split('\n');
+                const code = lines.slice(1).join('\n');
+                return (
+                  <pre key={index} className="bg-gray-800 text-green-400 p-3 rounded-md my-2 overflow-x-auto text-xs">
+                    <code>{code}</code>
+                  </pre>
+                );
+              } else {
+                // Regular text with basic markdown formatting
+                return (
+                  <span key={index} dangerouslySetInnerHTML={{
+                    __html: part
+                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                      .replace(/\n/g, '<br>')
+                  }} />
+                );
+              }
+            })}
           </div>
         )}
         <div className="mt-2 text-xs opacity-70">

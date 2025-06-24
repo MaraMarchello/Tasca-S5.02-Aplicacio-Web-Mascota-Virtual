@@ -222,7 +222,13 @@ public class AchievementService {
      * Track Git command usage
      */
     public void trackGitCommandUsage(Long userId, String command) {
+        // Track first command execution
+        progressAchievement(userId, "GIT_FIRST_COMMAND", 1);
+        
+        // Track general command usage
         progressAchievement(userId, "GIT_EXPERIMENTER", 1);
+        progressAchievement(userId, "GIT_PRACTITIONER", 1);
+        progressAchievement(userId, "GIT_CURIOUS", 1);
         
         // Track specific commands for command master achievement
         String[] masterCommands = {"init", "add", "commit", "push", "pull", "merge"};
@@ -240,6 +246,43 @@ public class AchievementService {
     public void trackDailyGitLearning(Long userId) {
         progressAchievement(userId, "GIT_DAILY_LEARNER", 1);
         progressAchievement(userId, "GIT_DEDICATED", 1);
+    }
+    
+    // Simple Git Coach achievement tracking methods for quick wins
+    
+    /**
+     * Track Git Coach page visit
+     */
+    public void trackGitCoachVisit(Long userId) {
+        progressAchievement(userId, "GIT_VISITOR", 1);
+    }
+    
+    /**
+     * Track Git terminal interface usage
+     */
+    public void trackGitTerminalUsage(Long userId) {
+        progressAchievement(userId, "GIT_TERMINAL_USER", 1);
+    }
+    
+    /**
+     * Track Git visualization interface usage
+     */
+    public void trackGitVisualizationUsage(Long userId) {
+        progressAchievement(userId, "GIT_VISUALIZATION_USER", 1);
+    }
+    
+    /**
+     * Track scenario start
+     */
+    public void trackGitScenarioStart(Long userId) {
+        progressAchievement(userId, "GIT_SCENARIO_STARTER", 1);
+    }
+    
+    /**
+     * Track scenario step completion
+     */
+    public void trackGitStepCompletion(Long userId) {
+        progressAchievement(userId, "GIT_STUDENT", 1);
     }
     
     // New achievement tracking methods for enhanced gamification

@@ -119,6 +119,15 @@ public class GitScenarioService {
         progress.setCurrentStep(currentStep);
         progress.setCommandsExecuted(progress.getCommandsExecuted() + 1);
         
+        // Track step completion achievement
+        if (stepCompleted) {
+            try {
+                achievementService.trackGitStepCompletion(userId);
+            } catch (Exception e) {
+                log.warn("Failed to track step completion for user: {}", userId, e);
+            }
+        }
+        
         if (stepCompleted && currentStep >= progress.getTotalSteps()) {
             completeScenario(progress);
         }

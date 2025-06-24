@@ -62,7 +62,17 @@ const Achievements: React.FC = () => {
       case 'AI_POWER_USER': return '⚡';
       case 'CODE_HELPER': return '💻';
 
-      // Git achievements
+      // Git achievements - Quick Start
+      case 'GIT_VISITOR': return '👀';
+      case 'GIT_TERMINAL_USER': return '💻';
+      case 'GIT_VISUALIZATION_USER': return '📊';
+      case 'GIT_FIRST_COMMAND': return '⌨️';
+      case 'GIT_SCENARIO_STARTER': return '🎬';
+      case 'GIT_CURIOUS': return '🤔';
+      case 'GIT_STUDENT': return '🎒';
+      case 'GIT_PRACTITIONER': return '🔧';
+      
+      // Git achievements - Learning Progress
       case 'GIT_FIRST_STEPS': return '👶';
       case 'GIT_BEGINNER': return '🌱';
       case 'GIT_BASICS_MASTER': return '📚';

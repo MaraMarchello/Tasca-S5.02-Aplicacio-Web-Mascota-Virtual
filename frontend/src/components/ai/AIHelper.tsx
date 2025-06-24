@@ -85,17 +85,26 @@ const AIHelper: React.FC<AIHelperProps> = ({ className = '' }) => {
   ];
 
   const getContextForFunction = () => {
+    const languageContext = `Programming Language: ${selectedLanguage}`;
+    const codeContext = code ? `\n\nCurrent Code:\n\`\`\`${selectedLanguage}\n${code}\n\`\`\`` : '';
+    
     switch (activeFunction) {
       case 'explain':
-        return code ? `Please explain this code:\n\n${code}` : 'Ready to explain code concepts and syntax.';
+        return code 
+          ? `${languageContext}\nMode: Code Explanation${codeContext}\n\nPlease explain this ${selectedLanguage} code in detail.`
+          : `${languageContext}\nMode: Code Explanation\n\nReady to explain ${selectedLanguage} code concepts and syntax.`;
       case 'debug':
-        return code ? `Please help debug this code:\n\n${code}` : 'Ready to help find and fix code issues.';
+        return code 
+          ? `${languageContext}\nMode: Debug Assistance${codeContext}\n\nPlease help debug this ${selectedLanguage} code and identify any issues.`
+          : `${languageContext}\nMode: Debug Assistance\n\nReady to help find and fix ${selectedLanguage} code issues.`;
       case 'refactor':
-        return code ? `Please suggest improvements for this code:\n\n${code}` : 'Ready to help improve code quality and structure.';
+        return code 
+          ? `${languageContext}\nMode: Code Refactoring${codeContext}\n\nPlease suggest improvements and refactoring for this ${selectedLanguage} code.`
+          : `${languageContext}\nMode: Code Refactoring\n\nReady to help improve ${selectedLanguage} code quality and structure.`;
       case 'generate':
-        return 'Ready to generate new code based on your requirements.';
+        return `${languageContext}\nMode: Code Generation\n\nReady to generate new ${selectedLanguage} code based on your requirements.`;
       default:
-        return '';
+        return `${languageContext}\nMode: General Chat\n\nReady to assist with ${selectedLanguage} programming questions.`;
     }
   };
 

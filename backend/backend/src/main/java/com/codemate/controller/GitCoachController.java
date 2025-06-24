@@ -8,6 +8,7 @@ import com.codemate.security.UserPrincipal;
 import com.codemate.service.GitScenarioService;
 import com.codemate.service.GitSimulatorService;
 import com.codemate.service.GitDashboardService;
+import com.codemate.service.AchievementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -26,12 +27,23 @@ public class GitCoachController {
     private final GitSimulatorService gitSimulatorService;
     private final GitScenarioService gitScenarioService;
     private final GitDashboardService gitDashboardService;
+    private final AchievementService achievementService;
 
     // Scenario endpoints
 
     @GetMapping("/scenarios")
-    public ResponseEntity<List<GitScenario>> getAllScenarios() {
-        log.info("Fetching all active Git scenarios");
+    public ResponseEntity<List<GitScenario>> getAllScenarios(@CurrentUser UserPrincipal currentUser) {
+        log.info("Fetching all active Git scenarios for user: {}", currentUser != null ? currentUser.getId() : "anonymous");
+        
+        // Track Git Coach page visit for authenticated users
+        if (currentUser != null) {
+            try {
+                achievementService.trackGitCoachVisit(currentUser.getId());
+            } catch (Exception e) {
+                log.warn("Failed to track Git Coach visit for user: {}", currentUser.getId(), e);
+            }
+        }
+        
         List<GitScenario> scenarios = gitScenarioService.getAllActiveScenarios();
         return ResponseEntity.ok(scenarios);
     }
@@ -64,6 +76,14 @@ public class GitCoachController {
             @PathVariable String scenarioId,
             @CurrentUser UserPrincipal currentUser) {
         log.info("Starting scenario: {} for user: {}", scenarioId, currentUser.getId());
+        
+        // Track scenario start achievement
+        try {
+            achievementService.trackGitScenarioStart(currentUser.getId());
+        } catch (Exception e) {
+            log.warn("Failed to track scenario start for user: {}", currentUser.getId(), e);
+        }
+        
         GitUserProgress progress = gitScenarioService.startScenario(currentUser.getId(), scenarioId);
         return ResponseEntity.ok(progress);
     }

@@ -3,6 +3,7 @@ package com.codemate.controller;
 import com.codemate.model.Achievement;
 import com.codemate.model.UserAchievement;
 import com.codemate.payload.DataResponse;
+import com.codemate.payload.ApiResponse;
 import com.codemate.payload.response.AchievementResponse;
 import com.codemate.payload.response.UserAchievementResponse;
 import com.codemate.security.CurrentUser;
@@ -89,6 +90,34 @@ public class AchievementController {
         AchievementStats stats = new AchievementStats(completedCount, totalAvailable);
         
         return ResponseEntity.ok(DataResponse.success(stats));
+    }
+    
+    // Git Coach specific achievement tracking endpoints
+    
+    @PostMapping("/track/git-terminal")
+    public ResponseEntity<ApiResponse> trackGitTerminalUsage(@CurrentUser UserPrincipal userPrincipal) {
+        log.debug("Tracking Git terminal usage for user: {}", userPrincipal.getId());
+        
+        try {
+            achievementService.trackGitTerminalUsage(userPrincipal.getId());
+            return ResponseEntity.ok(new ApiResponse(true, "Git terminal usage tracked successfully"));
+        } catch (Exception e) {
+            log.error("Failed to track Git terminal usage for user: {}", userPrincipal.getId(), e);
+            return ResponseEntity.ok(new ApiResponse(true, "Tracking completed")); // Don't fail the request
+        }
+    }
+    
+    @PostMapping("/track/git-visualization")
+    public ResponseEntity<ApiResponse> trackGitVisualizationUsage(@CurrentUser UserPrincipal userPrincipal) {
+        log.debug("Tracking Git visualization usage for user: {}", userPrincipal.getId());
+        
+        try {
+            achievementService.trackGitVisualizationUsage(userPrincipal.getId());
+            return ResponseEntity.ok(new ApiResponse(true, "Git visualization usage tracked successfully"));
+        } catch (Exception e) {
+            log.error("Failed to track Git visualization usage for user: {}", userPrincipal.getId(), e);
+            return ResponseEntity.ok(new ApiResponse(true, "Tracking completed")); // Don't fail the request
+        }
     }
     
     // Helper methods

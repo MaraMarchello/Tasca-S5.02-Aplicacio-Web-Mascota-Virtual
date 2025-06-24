@@ -1,5 +1,13 @@
 -- Insert Git-specific achievements
 INSERT INTO achievements (code, name, description, target_value, points_reward, badge_image_url, active) VALUES
+
+-- Quick Start Git Achievements (Very Fast to Complete)
+('GIT_VISITOR', 'Git Explorer', 'Visit the Git Coach page for the first time', 1, 25, null, true),
+('GIT_TERMINAL_USER', 'Terminal Explorer', 'Open the Git terminal interface', 1, 50, null, true),
+('GIT_VISUALIZATION_USER', 'Visual Learner', 'Open the Git visualization interface', 1, 50, null, true),
+('GIT_FIRST_COMMAND', 'First Command', 'Execute your first Git command', 1, 75, null, true),
+('GIT_SCENARIO_STARTER', 'Scenario Starter', 'Start your first Git scenario', 1, 100, null, true),
+
 -- Beginner Git achievements
 ('GIT_FIRST_STEPS', 'Git Novice', 'Complete your first Git scenario', 1, 100, null, true),
 ('GIT_BEGINNER', 'Git Beginner', 'Complete 3 beginner Git scenarios', 3, 250, null, true),
@@ -28,7 +36,12 @@ INSERT INTO achievements (code, name, description, target_value, points_reward, 
 -- Special achievements
 ('GIT_HELP_SEEKER', 'Help Seeker', 'Use hints 25 times (learning is important!)', 25, 200, null, true),
 ('GIT_EXPERIMENTER', 'Experimenter', 'Try 100 different Git commands', 100, 600, null, true),
-('GIT_COMMAND_MASTER', 'Command Master', 'Use all basic Git commands (init, add, commit, push, pull, merge)', 6, 800, null, true)
+('GIT_COMMAND_MASTER', 'Command Master', 'Use all basic Git commands (init, add, commit, push, pull, merge)', 6, 800, null, true),
+
+-- Learning Engagement Achievements
+('GIT_CURIOUS', 'Git Curious', 'Execute 5 different Git commands', 5, 150, null, true),
+('GIT_STUDENT', 'Eager Student', 'Complete any scenario step', 1, 50, null, true),
+('GIT_PRACTITIONER', 'Git Practitioner', 'Execute 25 Git commands total', 25, 300, null, true)
 
 ON CONFLICT (code) DO NOTHING;
 

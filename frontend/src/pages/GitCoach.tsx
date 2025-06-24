@@ -12,6 +12,7 @@ const GitCoach: React.FC = () => {
   const [currentProgress, setCurrentProgress] = useState<UserProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'scenarios' | 'terminal' | 'demo' | 'visualization'>('scenarios');
+  const [trackedViews, setTrackedViews] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchScenarios();
@@ -163,6 +164,43 @@ const GitCoach: React.FC = () => {
     fetchUserProgress();
   };
 
+  const trackViewUsage = async (viewType: string) => {
+    const token = localStorage.getItem('token');
+    if (!token || trackedViews.has(viewType)) return;
+
+    try {
+      let endpoint = '';
+      switch (viewType) {
+        case 'terminal':
+        case 'demo':
+          endpoint = '/api/v1/achievements/track/git-terminal';
+          break;
+        case 'visualization':
+          endpoint = '/api/v1/achievements/track/git-visualization';
+          break;
+        default:
+          return;
+      }
+
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      setTrackedViews(prev => new Set([...prev, viewType]));
+    } catch (error) {
+      console.error('Failed to track view usage:', error);
+    }
+  };
+
+  const handleViewChange = (newView: string) => {
+    setView(newView as any);
+    trackViewUsage(newView);
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -189,15 +227,15 @@ const GitCoach: React.FC = () => {
               <div className="flex space-x-4 mb-6">
                 <Button
                   variant="secondary"
-                  onClick={() => setView('demo')}
+                  onClick={() => handleViewChange('demo')}
                 >
-                  🚀 Terminal Demo
+                  🚀 Terminal
                 </Button>
                 <Button
                   variant="secondary"
-                  onClick={() => setView('visualization')}
+                  onClick={() => handleViewChange('visualization')}
                 >
-                  🌳 Visualization Demo
+                  🌳 Visualization
                 </Button>
               </div>
               
@@ -319,7 +357,7 @@ const GitCoach: React.FC = () => {
               <div className="flex items-center space-x-4">
                 <Button
                   variant="outline"
-                  onClick={() => setView('scenarios')}
+                  onClick={() => handleViewChange('scenarios')}
                 >
                   ← Back to Scenarios
                 </Button>
@@ -370,7 +408,7 @@ const GitCoach: React.FC = () => {
               >
                 ← Back to Scenarios
               </Button>
-              <h2 className="text-xl font-semibold">Terminal Components Demo</h2>
+              <h2 className="text-xl font-semibold">Terminal Interface</h2>
             </div>
             <GitTerminalDemo />
           </>
@@ -384,7 +422,7 @@ const GitCoach: React.FC = () => {
               >
                 ← Back to Scenarios
               </Button>
-              <h2 className="text-xl font-semibold">Git Visualization Demo</h2>
+              <h2 className="text-xl font-semibold">Git Visualization</h2>
             </div>
             <GitVisualizationDemo />
           </>

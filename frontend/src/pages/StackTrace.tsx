@@ -1,31 +1,51 @@
 import React, { useState } from 'react';
 import Layout from '../components/layout/Layout';
+import { aiApi } from '../utils/api';
+import { useToast } from '../contexts/ToastContext';
 
 const StackTracePage: React.FC = () => {
   const [stackTrace, setStackTrace] = useState('');
   const [explanation, setExplanation] = useState('');
   const [loading, setLoading] = useState(false);
+  const { showError, showSuccess } = useToast();
 
   const handleAnalyze = async () => {
     if (!stackTrace.trim()) {
+      showError('Please enter a stack trace to analyze.');
       return;
     }
 
     setLoading(true);
     try {
-      // Simulate API call for stack trace analysis
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setExplanation(`Stack trace analysis for: ${stackTrace.substring(0, 50)}...
+      const response = await aiApi.explainError(stackTrace);
       
-This appears to be a Java exception. Here are some common causes and solutions:
-1. Check for null pointer exceptions
-2. Verify array bounds
-3. Ensure proper variable initialization
-4. Review method signatures and parameters
-
-For more detailed analysis, please integrate with an AI service.`);
+      // Format the AI response for display
+      let formattedExplanation = '';
+      
+      if (response.answer) {
+        formattedExplanation += `**Analysis:**\n${response.answer}\n\n`;
+      }
+      
+      if (response.explanation) {
+        formattedExplanation += `**Detailed Explanation:**\n${response.explanation}\n\n`;
+      }
+      
+      if (response.codeSnippet) {
+        formattedExplanation += `**Example Fix:**\n\`\`\`java\n${response.codeSnippet}\n\`\`\`\n\n`;
+      }
+      
+      if (response.references) {
+        formattedExplanation += `**References:**\n${response.references}`;
+      }
+      
+      setExplanation(formattedExplanation.trim());
+      showSuccess('Stack trace analyzed successfully!');
+      
     } catch (error) {
-      setExplanation('Error analyzing stack trace. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Stack trace analysis error:', error);
+      showError(`Failed to analyze stack trace: ${errorMessage}`);
+      setExplanation(`**Error:** Unable to analyze the stack trace at this time.\n\n**Reason:** ${errorMessage}\n\n**Suggestion:** Please check your internet connection and try again. If the problem persists, the AI service may be temporarily unavailable.`);
     } finally {
       setLoading(false);
     }
@@ -75,9 +95,9 @@ For more detailed analysis, please integrate with an AI service.`);
         {explanation && (
           <div className="bg-green-50 dark:bg-green-900 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-3">
-              Analysis Results
+              🤖 AI Analysis Results
             </h3>
-            <div className="text-green-700 dark:text-green-300 whitespace-pre-wrap">
+            <div className="text-green-700 dark:text-green-300 whitespace-pre-wrap prose prose-sm max-w-none">
               {explanation}
             </div>
           </div>

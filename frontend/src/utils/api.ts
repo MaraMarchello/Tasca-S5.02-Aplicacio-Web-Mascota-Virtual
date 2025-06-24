@@ -346,9 +346,100 @@ export const pointsApi = {
   },
 };
 
+// AI API interfaces
+interface AIAssistanceRequest {
+  query: string;
+  context?: string;
+  language?: string;
+}
+
+interface AIAssistanceResponse {
+  answer: string;
+  explanation?: string;
+  codeSnippet?: string;
+  references?: string;
+}
+
+// AI API calls with retry mechanism
+export const aiApi = {
+  getCodeAssistance: async (
+    query: string, 
+    context?: string, 
+    language: string = 'java',
+    retries: number = 3
+  ): Promise<AIAssistanceResponse> => {
+    const request: AIAssistanceRequest = { query, context, language };
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const response = await apiCall<AIAssistanceResponse>('/v1/ai/code-assistance', {
+          method: 'POST',
+          body: JSON.stringify(request),
+        });
+        return response;
+      } catch (error) {
+        if (attempt === retries) {
+          throw new Error(`Failed to get AI assistance after ${retries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      }
+    }
+    throw new Error('Unexpected error in AI API call');
+  },
+
+  explainError: async (
+    stackTrace: string, 
+    retries: number = 3
+  ): Promise<AIAssistanceResponse> => {
+    const request: AIAssistanceRequest = { query: stackTrace };
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const response = await apiCall<AIAssistanceResponse>('/v1/ai/explain-error', {
+          method: 'POST',
+          body: JSON.stringify(request),
+        });
+        return response;
+      } catch (error) {
+        if (attempt === retries) {
+          throw new Error(`Failed to explain error after ${retries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      }
+    }
+    throw new Error('Unexpected error in AI API call');
+  },
+
+  explainGitError: async (
+    gitError: string, 
+    retries: number = 3
+  ): Promise<AIAssistanceResponse> => {
+    const request: AIAssistanceRequest = { query: gitError };
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const response = await apiCall<AIAssistanceResponse>('/v1/ai/explain-git-error', {
+          method: 'POST',
+          body: JSON.stringify(request),
+        });
+        return response;
+      } catch (error) {
+        if (attempt === retries) {
+          throw new Error(`Failed to explain Git error after ${retries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      }
+    }
+    throw new Error('Unexpected error in AI API call');
+  },
+};
+
 // Export utility functions
 export { getAuthToken, setAuthToken, removeAuthToken };
-export type { Pet, ItemTemplate, PetItem, Achievement, UserAchievement, PointTransaction, PointBalance };
+export type { Pet, ItemTemplate, PetItem, Achievement, UserAchievement, PointTransaction, PointBalance, AIAssistanceRequest, AIAssistanceResponse };
 
 // Generic API for admin operations
 export const api = {
