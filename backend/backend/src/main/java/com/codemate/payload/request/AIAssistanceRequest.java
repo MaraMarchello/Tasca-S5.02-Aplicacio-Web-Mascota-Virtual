@@ -12,4 +12,6 @@ public class AIAssistanceRequest {
     private String context;
     
     private String language = "java";
+    
+    private String codeSnippet;
 } 

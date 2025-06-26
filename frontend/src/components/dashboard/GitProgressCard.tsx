@@ -53,19 +53,47 @@ export const GitProgressCard: React.FC<GitProgressCardProps> = ({ userId, classN
   const fetchGitStats = async () => {
     try {
       setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      // Check if user is authenticated
+      if (!token) {
+        setError('Please log in to view Git stats');
+        return;
+      }
+
       const response = await fetch('/api/v1/git/dashboard', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
+      if (response.status === 401 || response.status === 403) {
+        setError('Please log in to view Git stats');
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error('Failed to fetch Git stats');
+        throw new Error(`Failed to fetch Git stats: ${response.status}`);
       }
 
       const data = await response.json();
-      setGitStats(data);
+      
+      // Transform backend data to match frontend interface
+      const transformedStats: GitStats = {
+        completedScenarios: data.completedScenarios || 0,
+        totalPointsEarned: data.totalPointsEarned || 0,
+        averageCommandsPerScenario: data.userStats?.averageCommandsPerScenario || 0,
+        learningStreak: data.learningStreak || 0,
+        categoryProgress: data.categoryProgress || {},
+        levelProgress: data.levelProgress || {},
+        recentActivity: data.recentActivity || [],
+        completedAchievements: data.completedAchievements || 0,
+        totalAchievements: data.totalAchievements || 0,
+      };
+      
+      setGitStats(transformedStats);
     } catch (err) {
+      console.error('Error fetching Git stats:', err);
       setError(err instanceof Error ? err.message : 'Failed to load Git stats');
     } finally {
       setLoading(false);
@@ -118,14 +146,30 @@ export const GitProgressCard: React.FC<GitProgressCardProps> = ({ userId, classN
   }
 
   if (error) {
+    const isAuthError = error.includes('log in');
     return (
-      <Card className={`${className} border-red-200`}>
+      <Card className={`${className} ${isAuthError ? 'border-blue-200' : 'border-red-200'}`}>
         <div className="p-6 text-center">
-          <div className="text-red-500 mb-2">⚠️</div>
-          <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={fetchGitStats} variant="outline" size="sm">
-            Try Again
-          </Button>
+          <div className={`mb-2 ${isAuthError ? 'text-blue-500' : 'text-red-500'}`}>
+            {isAuthError ? '🔐' : '⚠️'}
+          </div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            {isAuthError ? 'Authentication Required' : 'Error Loading Git Stats'}
+          </h3>
+          <p className={`mb-4 ${isAuthError ? 'text-blue-600' : 'text-red-600'}`}>{error}</p>
+          {isAuthError ? (
+            <Button 
+              onClick={() => window.location.href = '/login'} 
+              variant="primary" 
+              size="sm"
+            >
+              Go to Login
+            </Button>
+          ) : (
+            <Button onClick={fetchGitStats} variant="outline" size="sm">
+              Try Again
+            </Button>
+          )}
         </div>
       </Card>
     );

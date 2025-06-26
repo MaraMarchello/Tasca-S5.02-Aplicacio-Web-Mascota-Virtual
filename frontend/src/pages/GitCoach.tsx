@@ -11,6 +11,7 @@ const GitCoach: React.FC = () => {
   const [currentRepository, setCurrentRepository] = useState<number | null>(null);
   const [currentProgress, setCurrentProgress] = useState<UserProgress | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<'scenarios' | 'terminal' | 'demo' | 'visualization'>('scenarios');
   const [trackedViews, setTrackedViews] = useState<Set<string>>(new Set());
 
@@ -24,6 +25,7 @@ const GitCoach: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) {
         console.log('No token found, skipping scenarios fetch for demo mode');
+        setLoading(false);
         return;
       }
 
@@ -36,12 +38,16 @@ const GitCoach: React.FC = () => {
       
       if (response.ok) {
         const data = await response.json();
-        setScenarios(data);
+        setScenarios(data || []);
+      } else if (response.status === 401 || response.status === 403) {
+        console.log('User not authenticated, showing demo mode');
       } else {
-        console.log('Failed to fetch scenarios, user might not be authenticated');
+        console.error('Failed to fetch scenarios:', response.status);
+        setError(`Failed to load scenarios: ${response.status}`);
       }
     } catch (error) {
       console.error('Failed to fetch scenarios:', error);
+      setError('Failed to connect to server');
     }
   };
 
@@ -63,9 +69,11 @@ const GitCoach: React.FC = () => {
       
       if (response.ok) {
         const data = await response.json();
-        setUserProgress(data);
+        setUserProgress(data || []);
+      } else if (response.status === 401 || response.status === 403) {
+        console.log('User not authenticated, showing demo mode');
       } else {
-        console.log('Failed to fetch user progress, user might not be authenticated');
+        console.error('Failed to fetch user progress:', response.status);
       }
     } catch (error) {
       console.error('Failed to fetch user progress:', error);
@@ -139,7 +147,7 @@ const GitCoach: React.FC = () => {
   };
 
   const getProgressForScenario = (scenarioId: string): UserProgress | undefined => {
-    return userProgress.find(p => p.scenario.scenarioId === scenarioId);
+    return userProgress?.find(p => p.scenario?.scenarioId === scenarioId);
   };
 
   const getProgressIcon = (progress?: UserProgress): string => {
@@ -206,6 +214,7 @@ const GitCoach: React.FC = () => {
       <Layout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <span className="ml-3 text-gray-600">Loading Git Coach...</span>
         </div>
       </Layout>
     );
@@ -247,58 +256,106 @@ const GitCoach: React.FC = () => {
                   </p>
                 </div>
               )}
+
+              {error && (
+                <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800 mb-6">
+                  <h4 className="font-medium text-red-800 dark:text-red-200 mb-2">⚠️ Connection Error</h4>
+                  <p className="text-sm text-red-700 dark:text-red-300 mb-3">
+                    {error}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setError(null);
+                      fetchScenarios();
+                      fetchUserProgress();
+                    }}
+                  >
+                    🔄 Retry
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card variant="elevated">
-                <CardContent className="p-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {userProgress.filter(p => p.status === 'COMPLETED').length}
+            {localStorage.getItem('token') && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card variant="elevated">
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {userProgress?.filter(p => p.status === 'COMPLETED').length || 0}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Completed</div>
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Completed</div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card variant="elevated">
-                <CardContent className="p-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {userProgress.filter(p => p.status === 'IN_PROGRESS').length}
+                  </CardContent>
+                </Card>
+                
+                <Card variant="elevated">
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {userProgress?.filter(p => p.status === 'IN_PROGRESS').length || 0}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">In Progress</div>
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">In Progress</div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card variant="elevated">
-                <CardContent className="p-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                      {userProgress.reduce((sum, p) => sum + p.pointsEarned, 0)}
+                  </CardContent>
+                </Card>
+                
+                <Card variant="elevated">
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                        {userProgress?.reduce((sum, p) => sum + (p.pointsEarned || 0), 0) || 0}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Points Earned</div>
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Points Earned</div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card variant="elevated">
-                <CardContent className="p-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                      {scenarios.length > 0 ? Math.round((userProgress.filter(p => p.status === 'COMPLETED').length / scenarios.length) * 100) : 0}%
+                  </CardContent>
+                </Card>
+                
+                <Card variant="elevated">
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                        {scenarios.length > 0 && userProgress ? Math.round(((userProgress.filter(p => p.status === 'COMPLETED').length) / scenarios.length) * 100) : 0}%
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Completion</div>
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Completion</div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
             {/* Scenarios Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {scenarios.map((scenario) => {
+            {scenarios.length === 0 && !error ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🎯</div>
+                <h3 className="text-xl font-semibold mb-2">No Scenarios Available</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  {localStorage.getItem('token') 
+                    ? 'Scenarios are being loaded or the server is starting up.'
+                    : 'Login to access interactive Git learning scenarios.'
+                  }
+                </p>
+                <div className="flex justify-center space-x-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleViewChange('demo')}
+                  >
+                    🚀 Try Demo Terminal
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleViewChange('visualization')}
+                  >
+                    🌳 View Visualization
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {scenarios.map((scenario) => {
                 const progress = getProgressForScenario(scenario.scenarioId);
                 return (
                   <Card key={scenario.id} variant="elevated" className="hover:shadow-lg transition-shadow">
@@ -348,7 +405,8 @@ const GitCoach: React.FC = () => {
                   </Card>
                 );
               })}
-            </div>
+              </div>
+            )}
           </>
         ) : view === 'terminal' ? (
           <>

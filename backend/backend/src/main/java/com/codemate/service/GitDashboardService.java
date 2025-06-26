@@ -3,6 +3,8 @@ package com.codemate.service;
 import com.codemate.model.GitScenario;
 import com.codemate.model.GitUserProgress;
 import com.codemate.model.UserAchievement;
+import com.codemate.payload.response.GitDashboardResponse;
+import com.codemate.payload.response.GitScenarioResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,7 +29,7 @@ public class GitDashboardService {
     /**
      * Gets comprehensive dashboard data for a user
      */
-    public GitDashboardData getDashboardData(Long userId) {
+    public GitDashboardResponse getDashboardData(Long userId) {
         log.info("Getting Git dashboard data for user: {}", userId);
 
         // Get user progress and stats
@@ -46,17 +48,17 @@ public class GitDashboardService {
         Long totalPointsEarned = pointTransactionService.getTotalPointsEarned(userId);
 
         // Calculate progress by category and level
-        Map<GitScenario.GitScenarioCategory, CategoryProgress> categoryProgress = calculateCategoryProgress(userProgress);
-        Map<GitScenario.GitScenarioLevel, LevelProgress> levelProgress = calculateLevelProgress(userProgress);
+        Map<GitScenario.GitScenarioCategory, GitDashboardResponse.CategoryProgress> categoryProgress = calculateCategoryProgress(userProgress);
+        Map<GitScenario.GitScenarioLevel, GitDashboardResponse.LevelProgress> levelProgress = calculateLevelProgress(userProgress);
 
         // Calculate learning streak and recent activity
         int learningStreak = calculateLearningStreak(completedScenarios);
-        List<RecentActivity> recentActivity = calculateRecentActivity(userProgress);
+        List<GitDashboardResponse.RecentActivity> recentActivity = calculateRecentActivity(userProgress);
 
         // Get recommended next scenarios
-        List<GitScenario> recommendedScenarios = getRecommendedScenarios(userId, userProgress);
+        List<GitScenarioResponse> recommendedScenarios = getRecommendedScenarios(userId, userProgress);
 
-        return GitDashboardData.builder()
+        return GitDashboardResponse.builder()
             .userId(userId)
             .userStats(userStats)
             .currentPoints(currentPoints)
@@ -73,6 +75,7 @@ public class GitDashboardService {
             .recentCompletedScenarios(completedScenarios.stream()
                 .filter(p -> p.getCompletedAt() != null && 
                            p.getCompletedAt().isAfter(LocalDateTime.now().minusDays(7)))
+                .map(GitDashboardResponse.GitUserProgressResponse::from)
                 .collect(Collectors.toList()))
             .build();
     }
@@ -80,13 +83,13 @@ public class GitDashboardService {
     /**
      * Gets Git learning statistics for admin dashboard
      */
-    public GitLearningStats getGitLearningStats() {
+    public GitDashboardResponse.GitLearningStats getGitLearningStats() {
         log.info("Getting overall Git learning statistics");
 
         List<GitScenario> allScenarios = gitScenarioService.getAllActiveScenarios();
         
         // This would require additional repository methods for global stats
-        return GitLearningStats.builder()
+        return GitDashboardResponse.GitLearningStats.builder()
             .totalScenarios(allScenarios.size())
             .totalUsers(0L) // Would need user count query
             .totalCompletions(0L) // Would need completion count query
@@ -97,7 +100,7 @@ public class GitDashboardService {
 
     // Private helper methods
 
-    private Map<GitScenario.GitScenarioCategory, CategoryProgress> calculateCategoryProgress(List<GitUserProgress> userProgress) {
+    private Map<GitScenario.GitScenarioCategory, GitDashboardResponse.CategoryProgress> calculateCategoryProgress(List<GitUserProgress> userProgress) {
         return userProgress.stream()
             .collect(Collectors.groupingBy(
                 p -> p.getScenario().getCategory(),
@@ -107,7 +110,7 @@ public class GitDashboardService {
                         long completed = progresses.stream()
                             .mapToLong(p -> p.getStatus() == GitUserProgress.GitProgressStatus.COMPLETED ? 1 : 0)
                             .sum();
-                        return CategoryProgress.builder()
+                        return GitDashboardResponse.CategoryProgress.builder()
                             .category(progresses.get(0).getScenario().getCategory())
                             .totalScenarios(progresses.size())
                             .completedScenarios((int) completed)
@@ -118,7 +121,7 @@ public class GitDashboardService {
             ));
     }
 
-    private Map<GitScenario.GitScenarioLevel, LevelProgress> calculateLevelProgress(List<GitUserProgress> userProgress) {
+    private Map<GitScenario.GitScenarioLevel, GitDashboardResponse.LevelProgress> calculateLevelProgress(List<GitUserProgress> userProgress) {
         return userProgress.stream()
             .collect(Collectors.groupingBy(
                 p -> p.getScenario().getLevel(),
@@ -128,7 +131,7 @@ public class GitDashboardService {
                         long completed = progresses.stream()
                             .mapToLong(p -> p.getStatus() == GitUserProgress.GitProgressStatus.COMPLETED ? 1 : 0)
                             .sum();
-                        return LevelProgress.builder()
+                        return GitDashboardResponse.LevelProgress.builder()
                             .level(progresses.get(0).getScenario().getLevel())
                             .totalScenarios(progresses.size())
                             .completedScenarios((int) completed)
@@ -180,11 +183,11 @@ public class GitDashboardService {
         return streak;
     }
 
-    private List<RecentActivity> calculateRecentActivity(List<GitUserProgress> userProgress) {
+    private List<GitDashboardResponse.RecentActivity> calculateRecentActivity(List<GitUserProgress> userProgress) {
         return userProgress.stream()
             .filter(p -> p.getCompletedAt() != null && 
                        p.getCompletedAt().isAfter(LocalDateTime.now().minusDays(30)))
-            .map(p -> RecentActivity.builder()
+            .map(p -> GitDashboardResponse.RecentActivity.builder()
                 .scenarioTitle(p.getScenario().getTitle())
                 .completedAt(p.getCompletedAt())
                 .pointsEarned(p.getPointsEarned())
@@ -196,7 +199,7 @@ public class GitDashboardService {
             .collect(Collectors.toList());
     }
 
-    private List<GitScenario> getRecommendedScenarios(Long userId, List<GitUserProgress> userProgress) {
+    private List<GitScenarioResponse> getRecommendedScenarios(Long userId, List<GitUserProgress> userProgress) {
         // Get all scenarios
         List<GitScenario> allScenarios = gitScenarioService.getAllActiveScenarios();
         
@@ -210,65 +213,8 @@ public class GitDashboardService {
         return allScenarios.stream()
             .filter(s -> !completedScenarioIds.contains(s.getScenarioId()))
             .limit(5)
+            .map(GitScenarioResponse::from)
             .collect(Collectors.toList());
     }
 
-    // Data transfer objects
-
-    @lombok.Builder
-    @lombok.Data
-    public static class GitDashboardData {
-        private Long userId;
-        private GitScenarioService.GitUserStats userStats;
-        private Long currentPoints;
-        private Long totalPointsEarned;
-        private Integer completedScenarios;
-        private Integer inProgressScenarios;
-        private Integer totalAchievements;
-        private Integer completedAchievements;
-        private Map<GitScenario.GitScenarioCategory, CategoryProgress> categoryProgress;
-        private Map<GitScenario.GitScenarioLevel, LevelProgress> levelProgress;
-        private Integer learningStreak;
-        private List<RecentActivity> recentActivity;
-        private List<GitScenario> recommendedScenarios;
-        private List<GitUserProgress> recentCompletedScenarios;
-    }
-
-    @lombok.Builder
-    @lombok.Data
-    public static class CategoryProgress {
-        private GitScenario.GitScenarioCategory category;
-        private Integer totalScenarios;
-        private Integer completedScenarios;
-        private Double completionPercentage;
-    }
-
-    @lombok.Builder
-    @lombok.Data
-    public static class LevelProgress {
-        private GitScenario.GitScenarioLevel level;
-        private Integer totalScenarios;
-        private Integer completedScenarios;
-        private Double completionPercentage;
-    }
-
-    @lombok.Builder
-    @lombok.Data
-    public static class RecentActivity {
-        private String scenarioTitle;
-        private LocalDateTime completedAt;
-        private Integer pointsEarned;
-        private GitScenario.GitScenarioCategory category;
-        private GitScenario.GitScenarioLevel level;
-    }
-
-    @lombok.Builder
-    @lombok.Data
-    public static class GitLearningStats {
-        private Integer totalScenarios;
-        private Long totalUsers;
-        private Long totalCompletions;
-        private Double averageCompletionTime;
-        private List<GitScenario> popularScenarios;
-    }
 } 

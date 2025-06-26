@@ -1,5 +1,6 @@
 package com.codemate.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -45,12 +46,15 @@ public class GitRepository {
     private Boolean isActive = true;
     
     @OneToMany(mappedBy = "repository", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference("repository-commits")
     private List<GitCommit> commits;
     
     @OneToMany(mappedBy = "repository", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference("repository-branches")
     private List<GitBranch> branches;
     
     @OneToMany(mappedBy = "repository", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference("repository-commands")
     private List<GitCommand> commands;
     
     @CreatedDate

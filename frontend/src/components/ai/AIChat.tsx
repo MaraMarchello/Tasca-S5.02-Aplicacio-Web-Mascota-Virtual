@@ -9,6 +9,15 @@ interface Message {
   content: string;
   timestamp: Date;
   isLoading?: boolean;
+  codeSnippet?: string;
+}
+
+interface Conversation {
+  id: number;
+  title: string;
+  contextType: string;
+  programmingLanguage: string;
+  updatedAt: string;
 }
 
 interface AIChatProps {
@@ -16,27 +25,30 @@ interface AIChatProps {
   onCodeExplained?: (explanation: string) => void;
   initialContext?: string;
   className?: string;
+  mode?: 'chat' | 'explain' | 'debug' | 'refactor' | 'generate';
+  currentCode?: string;
 }
 
 const AIChat: React.FC<AIChatProps> = ({
   onCodeGenerated,
   onCodeExplained,
   initialContext,
-  className = ''
+  className = '',
+  mode = 'chat',
+  currentCode
 }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      type: 'system',
-      content: 'Hello! I\'m your AI coding assistant. I can help you with Java programming, explain code, debug issues, and generate code snippets. How can I assist you today?',
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
+  const [codeInput, setCodeInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [showConversations, setShowConversations] = useState(false);
+  const [showCodeExecution, setShowCodeExecution] = useState(false);
+  const [executionResult, setExecutionResult] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -47,6 +59,34 @@ const AIChat: React.FC<AIChatProps> = ({
   }, [messages]);
 
   useEffect(() => {
+    initializeChat();
+  }, [mode, initialContext]);
+
+  useEffect(() => {
+    if (currentCode) {
+      setCodeInput(currentCode);
+    }
+  }, [currentCode]);
+
+  const initializeChat = async () => {
+    // Load conversations
+    try {
+      const conversationsData = await aiApi.getConversations(0, 10);
+      setConversations(conversationsData.content || []);
+    } catch (error) {
+      console.error('Failed to load conversations:', error);
+    }
+
+    // Set initial system message based on mode
+    const systemMessage = getSystemMessage(mode);
+    setMessages([{
+      id: '1',
+      type: 'system',
+      content: systemMessage,
+      timestamp: new Date()
+    }]);
+
+    // Add context if provided
     if (initialContext) {
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
@@ -55,7 +95,22 @@ const AIChat: React.FC<AIChatProps> = ({
         timestamp: new Date()
       }]);
     }
-  }, [initialContext]);
+  };
+
+  const getSystemMessage = (mode: string): string => {
+    switch (mode) {
+      case 'explain':
+        return 'I\'m here to explain code and concepts. Share your code or ask about programming concepts!';
+      case 'debug':
+        return 'I\'m ready to help debug your code. Share your error messages or problematic code!';
+      case 'refactor':
+        return 'I can help improve your code quality and structure. Share the code you\'d like to refactor!';
+      case 'generate':
+        return 'I can generate code based on your requirements. Describe what you need!';
+      default:
+        return 'Hello! I\'m your AI coding assistant with conversation memory. I can help you with Java programming, explain code, debug issues, generate code snippets, and even execute code. How can I assist you today?';
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -64,7 +119,8 @@ const AIChat: React.FC<AIChatProps> = ({
       id: Date.now().toString(),
       type: 'user',
       content: inputValue.trim(),
-      timestamp: new Date()
+      timestamp: new Date(),
+      codeSnippet: codeInput.trim() || undefined
     };
 
     const loadingMessage: Message = {
@@ -77,23 +133,40 @@ const AIChat: React.FC<AIChatProps> = ({
 
     setMessages(prev => [...prev, userMessage, loadingMessage]);
     const currentInput = inputValue.trim();
+    const currentCodeSnippet = codeInput.trim() || undefined;
     setInputValue('');
     setIsLoading(true);
 
     try {
       let aiResponse: AIAssistanceResponse;
       
-      // Determine the type of request based on content
-      if (isErrorMessage(currentInput)) {
-        // If it looks like a stack trace or error message
-        aiResponse = await aiApi.explainError(currentInput);
-      } else if (isGitError(currentInput)) {
-        // If it looks like a Git error
-        aiResponse = await aiApi.explainGitError(currentInput);
+      if (currentConversation) {
+        // Continue existing conversation
+        aiResponse = await aiApi.continueConversation(
+          currentConversation.id,
+          currentInput,
+          currentCodeSnippet
+        );
       } else {
-        // General code assistance
-        const context = initialContext || getContextFromMessages();
-        aiResponse = await aiApi.getCodeAssistance(currentInput, context);
+        // Start new conversation with memory
+        const contextType = mode === 'chat' ? 'general' : mode;
+        aiResponse = await aiApi.chatWithMemory(
+          currentInput,
+          contextType,
+          'java',
+          currentCodeSnippet
+        );
+        
+        // Refresh conversations list
+        try {
+          const conversationsData = await aiApi.getConversations(0, 10);
+          setConversations(conversationsData.content || []);
+          if (conversationsData.content && conversationsData.content.length > 0) {
+            setCurrentConversation(conversationsData.content[0]);
+          }
+        } catch (error) {
+          console.error('Failed to refresh conversations:', error);
+        }
       }
       
       // Format the AI response for display
@@ -101,7 +174,12 @@ const AIChat: React.FC<AIChatProps> = ({
       
       setMessages(prev => prev.map(msg => 
         msg.id === loadingMessage.id 
-          ? { ...msg, content: formattedResponse.content, isLoading: false }
+          ? { 
+              ...msg, 
+              content: formattedResponse.content, 
+              isLoading: false,
+              codeSnippet: aiResponse.codeSnippet
+            }
           : msg
       ));
 
@@ -136,39 +214,68 @@ const AIChat: React.FC<AIChatProps> = ({
     }
   };
 
+  const handleExecuteCode = async () => {
+    if (!codeInput.trim()) {
+      showError('Please enter some code to execute');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await aiApi.executeCode(codeInput.trim());
+      setExecutionResult(result);
+      setShowCodeExecution(true);
+      
+      if (result.success) {
+        showSuccess('Code executed successfully!');
+      } else {
+        showError('Code execution failed');
+      }
+    } catch (error) {
+      console.error('Code execution error:', error);
+      showError('Failed to execute code: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadConversation = async (conversation: Conversation) => {
+    try {
+      setIsLoading(true);
+      const messages = await aiApi.getConversationMessages(conversation.id);
+      
+      // Convert API messages to UI messages
+      const uiMessages: Message[] = messages.map((msg: any) => ({
+        id: msg.id.toString(),
+        type: msg.messageType.toLowerCase(),
+        content: msg.content,
+        timestamp: new Date(msg.createdAt),
+        codeSnippet: msg.codeSnippet
+      }));
+      
+      setMessages(uiMessages);
+      setCurrentConversation(conversation);
+      setShowConversations(false);
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
+      showError('Failed to load conversation');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const startNewConversation = () => {
+    setCurrentConversation(null);
+    setMessages([{
+      id: '1',
+      type: 'system',
+      content: getSystemMessage(mode),
+      timestamp: new Date()
+    }]);
+    setShowConversations(false);
+  };
+
   // Helper functions for AI integration
-  const isErrorMessage = (input: string): boolean => {
-    const errorIndicators = [
-      'exception', 'error', 'stacktrace', 'stack trace', 
-      'at java.', 'at com.', 'at org.', 'caused by',
-      'nullpointerexception', 'classnotfoundexception',
-      'illegalargumentexception', 'indexoutofboundsexception'
-    ];
-    const lowerInput = input.toLowerCase();
-    return errorIndicators.some(indicator => lowerInput.includes(indicator)) ||
-           input.includes('\tat ') || // Stack trace line indicator
-           /\w+Exception/.test(input); // Any word ending with Exception
-  };
-
-  const isGitError = (input: string): boolean => {
-    const gitErrorIndicators = [
-      'git:', 'fatal:', 'error:', 'merge conflict',
-      'git push', 'git pull', 'git merge', 'git rebase',
-      'remote:', 'branch', 'commit', 'repository'
-    ];
-    const lowerInput = input.toLowerCase();
-    return gitErrorIndicators.some(indicator => lowerInput.includes(indicator));
-  };
-
-  const getContextFromMessages = (): string => {
-    // Get the last few messages as context (excluding system messages)
-    const recentMessages = messages
-      .filter(msg => msg.type !== 'system')
-      .slice(-5) // Last 5 messages
-      .map(msg => `${msg.type}: ${msg.content}`)
-      .join('\n');
-    return recentMessages;
-  };
 
   const formatAIResponse = (response: AIAssistanceResponse): { content: string; isExplanation: boolean } => {
     let content = '';
@@ -271,15 +378,64 @@ const AIChat: React.FC<AIChatProps> = ({
             <span className="text-white text-sm font-bold">AI</span>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-800 dark:text-white">Code Assistant</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Ready to help with Java</p>
+            <h3 className="font-semibold text-gray-800 dark:text-white">
+              {currentConversation ? currentConversation.title : `Code Assistant (${mode})`}
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {currentConversation ? 'Conversation with memory' : 'Ready to help with Java'}
+            </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">Online</span>
+        <div className="flex items-center space-x-3">
+          <Button
+            onClick={() => setShowConversations(!showConversations)}
+            variant="secondary"
+            size="sm"
+            className="text-xs"
+          >
+            History
+          </Button>
+          <Button
+            onClick={startNewConversation}
+            variant="secondary"
+            size="sm"
+            className="text-xs"
+          >
+            New Chat
+          </Button>
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Online</span>
+          </div>
         </div>
       </div>
+
+      {/* Conversations Sidebar */}
+      {showConversations && (
+        <div className="max-h-48 overflow-y-auto border-b border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-900 p-2">
+          <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Recent Conversations</div>
+          {conversations.length === 0 ? (
+            <div className="text-xs text-gray-500 dark:text-gray-400">No conversations yet</div>
+          ) : (
+            conversations.map((conv) => (
+              <div
+                key={conv.id}
+                onClick={() => loadConversation(conv)}
+                className={`p-2 rounded cursor-pointer text-sm mb-1 ${
+                  currentConversation?.id === conv.id
+                    ? 'bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200'
+                    : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                <div className="font-medium truncate">{conv.title}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {conv.contextType} • {new Date(conv.updatedAt).toLocaleDateString()}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -289,8 +445,81 @@ const AIChat: React.FC<AIChatProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Code Execution Result Modal */}
+      {showCodeExecution && executionResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl max-h-96 overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Code Execution Result</h3>
+              <button
+                onClick={() => setShowCodeExecution(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <span className={`inline-block px-2 py-1 rounded text-sm ${
+                  executionResult.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {executionResult.success ? 'Success' : 'Error'}
+                </span>
+                <span className="ml-2 text-sm text-gray-500">
+                  Execution time: {executionResult.executionTime}ms
+                </span>
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">Output:</div>
+                <pre className="bg-gray-900 text-green-400 p-3 rounded text-sm overflow-x-auto">
+                  {executionResult.success ? executionResult.output : executionResult.error}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Input Area */}
       <div className="p-4 border-t border-border-light dark:border-border-dark bg-white dark:bg-gray-800">
+        {/* Code Input Section */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Code (optional)
+            </label>
+            <div className="flex space-x-2">
+              <Button
+                onClick={handleExecuteCode}
+                disabled={!codeInput.trim() || isLoading}
+                variant="secondary"
+                size="sm"
+                className="text-xs"
+              >
+                Execute
+              </Button>
+              <Button
+                onClick={() => setCodeInput('')}
+                disabled={!codeInput.trim()}
+                variant="secondary"
+                size="sm"
+                className="text-xs"
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+          <textarea
+            value={codeInput}
+            onChange={(e) => setCodeInput(e.target.value)}
+            placeholder="Enter Java code here (will be included in your message)..."
+            className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark font-mono text-sm"
+            rows={4}
+            disabled={isLoading}
+          />
+        </div>
+
+        {/* Message Input */}
         <div className="flex items-end space-x-3">
           <div className="flex-1">
             <textarea
@@ -300,7 +529,7 @@ const AIChat: React.FC<AIChatProps> = ({
               onKeyPress={handleKeyPress}
               placeholder="Ask me anything about Java programming..."
               className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark"
-              rows={3}
+              rows={2}
               disabled={isLoading}
             />
             <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">

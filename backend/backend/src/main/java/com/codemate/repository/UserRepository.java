@@ -17,4 +17,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Admin methods
     long countByEnabledTrue();
     long countByCreatedAtAfter(LocalDateTime date);
+    
+    // Analytics methods
+    default long countActiveUsers() {
+        return countByEnabledTrue();
+    }
 } 

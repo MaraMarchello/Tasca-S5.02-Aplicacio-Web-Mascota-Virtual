@@ -1,5 +1,6 @@
 package com.codemate.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -46,6 +47,7 @@ public class GitBranch {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "repository_id", nullable = false)
+    @JsonBackReference("repository-branches")
     private GitRepository repository;
     
     @CreatedDate

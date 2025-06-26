@@ -435,6 +435,106 @@ export const aiApi = {
     }
     throw new Error('Unexpected error in AI API call');
   },
+
+  // NEW: Chat with memory
+  chatWithMemory: async (
+    query: string,
+    contextType: string = 'general',
+    language: string = 'java',
+    codeSnippet?: string,
+    retries: number = 3
+  ): Promise<AIAssistanceResponse> => {
+    const params = new URLSearchParams();
+    params.append('contextType', contextType);
+    params.append('language', language);
+    
+    const request = { query, codeSnippet };
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const response = await apiCall<AIAssistanceResponse>(`/v1/ai/chat?${params}`, {
+          method: 'POST',
+          body: JSON.stringify(request),
+        });
+        return response;
+      } catch (error) {
+        if (attempt === retries) {
+          throw new Error(`Failed to chat with memory after ${retries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      }
+    }
+    throw new Error('Unexpected error in AI API call');
+  },
+
+  // NEW: Continue conversation
+  continueConversation: async (
+    conversationId: number,
+    query: string,
+    codeSnippet?: string,
+    retries: number = 3
+  ): Promise<AIAssistanceResponse> => {
+    const request = { query, codeSnippet };
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const response = await apiCall<AIAssistanceResponse>(`/v1/ai/conversations/${conversationId}/continue`, {
+          method: 'POST',
+          body: JSON.stringify(request),
+        });
+        return response;
+      } catch (error) {
+        if (attempt === retries) {
+          throw new Error(`Failed to continue conversation after ${retries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      }
+    }
+    throw new Error('Unexpected error in AI API call');
+  },
+
+  // NEW: Get conversations
+  getConversations: async (page: number = 0, size: number = 10): Promise<any> => {
+    return apiCall<any>(`/v1/ai/conversations?page=${page}&size=${size}`);
+  },
+
+  // NEW: Get conversation
+  getConversation: async (conversationId: number): Promise<any> => {
+    return apiCall<any>(`/v1/ai/conversations/${conversationId}`);
+  },
+
+  // NEW: Get conversation messages
+  getConversationMessages: async (conversationId: number): Promise<any[]> => {
+    return apiCall<any[]>(`/v1/ai/conversations/${conversationId}/messages`);
+  },
+
+  // NEW: Execute code
+  executeCode: async (
+    code: string,
+    input?: string,
+    retries: number = 3
+  ): Promise<any> => {
+    const request = { code, input };
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const response = await apiCall<any>('/v1/ai/execute-code', {
+          method: 'POST',
+          body: JSON.stringify(request),
+        });
+        return response;
+      } catch (error) {
+        if (attempt === retries) {
+          throw new Error(`Failed to execute code after ${retries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      }
+    }
+    throw new Error('Unexpected error in AI API call');
+  },
 };
 
 // Export utility functions

@@ -8,6 +8,7 @@ import com.codemate.security.UserPrincipal;
 import com.codemate.service.GitScenarioService;
 import com.codemate.service.GitSimulatorService;
 import com.codemate.service.GitDashboardService;
+import com.codemate.payload.response.GitDashboardResponse;
 import com.codemate.service.AchievementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,7 @@ public class GitCoachController {
     // Scenario endpoints
 
     @GetMapping("/scenarios")
-    public ResponseEntity<List<GitScenario>> getAllScenarios(@CurrentUser UserPrincipal currentUser) {
+    public ResponseEntity<List<GitScenario>> getAllScenarios(@CurrentUser(required = false) UserPrincipal currentUser) {
         log.info("Fetching all active Git scenarios for user: {}", currentUser != null ? currentUser.getId() : "anonymous");
         
         // Track Git Coach page visit for authenticated users
@@ -126,9 +127,9 @@ public class GitCoachController {
     }
 
     @GetMapping("/dashboard")
-    public ResponseEntity<GitDashboardService.GitDashboardData> getDashboardData(@CurrentUser UserPrincipal currentUser) {
+    public ResponseEntity<GitDashboardResponse> getDashboardData(@CurrentUser UserPrincipal currentUser) {
         log.info("Fetching Git dashboard data for user: {}", currentUser.getId());
-        GitDashboardService.GitDashboardData dashboardData = gitDashboardService.getDashboardData(currentUser.getId());
+        GitDashboardResponse dashboardData = gitDashboardService.getDashboardData(currentUser.getId());
         return ResponseEntity.ok(dashboardData);
     }
 

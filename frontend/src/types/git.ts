@@ -8,10 +8,13 @@ export interface GitScenario {
   pointsReward: number;
   estimatedMinutes: number;
   orderIndex: number;
-  totalSteps: number;
-  objectives: string[];
-  initialFiles?: { [filename: string]: string };
-  hints?: string[];
+  isActive: boolean;
+  initialState?: string; // JSON representation of initial repository state
+  expectedCommands?: string; // JSON array of expected commands
+  successCriteria?: string; // JSON representation of success criteria
+  tags?: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface UserProgress {
@@ -26,7 +29,8 @@ export interface UserProgress {
   pointsEarned: number;
   startedAt: string;
   completedAt?: string;
-  lastActivityAt: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface GitRepository {

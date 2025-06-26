@@ -1,5 +1,6 @@
 package com.codemate.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -73,6 +74,7 @@ public class GitScenario {
     private List<String> tags;
     
     @OneToMany(mappedBy = "scenario", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference("scenario-userProgress")
     private List<GitUserProgress> userProgress;
     
     @CreatedDate

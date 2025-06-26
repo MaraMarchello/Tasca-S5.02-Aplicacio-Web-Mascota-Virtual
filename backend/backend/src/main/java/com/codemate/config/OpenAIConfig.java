@@ -14,7 +14,7 @@ public class OpenAIConfig {
 
     public OpenAIConfig(
             @Value("${openai.api.key}") String openaiApiKey,
-            @Value("${openai.api.timeout:60}") Integer timeout) {
+            @Value("${openai.api.timeout:300}") Integer timeout) {
         this.openaiApiKey = openaiApiKey;
         this.timeout = timeout;
     }
