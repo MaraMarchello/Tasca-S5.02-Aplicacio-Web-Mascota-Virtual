@@ -33,5 +33,8 @@ public interface GitCommitRepository extends JpaRepository<GitCommit, Long> {
     @Query("SELECT COUNT(gc) FROM GitCommit gc WHERE gc.repository = :repository AND gc.branchName = :branchName")
     Long countByRepositoryAndBranchName(@Param("repository") GitRepository repository, @Param("branchName") String branchName);
     
+    @Query("SELECT gc FROM GitCommit gc WHERE gc.repository = :repository AND gc.hash LIKE CONCAT(:hashPrefix, '%')")
+    Optional<GitCommit> findByRepositoryAndHashStartingWith(@Param("repository") GitRepository repository, @Param("hashPrefix") String hashPrefix);
+    
     void deleteByRepository(GitRepository repository);
 } 

@@ -3,6 +3,7 @@ import { Card, Button } from '../ui';
 import GitPrompt from './GitPrompt';
 import GitOutput from './GitOutput';
 import CommandHistory, { CommandHistoryItem } from './CommandHistory';
+import { ExecuteResponse, RepositoryState as RepoState } from '../../types/git';
 import { useToast } from '../../contexts/ToastContext';
 
 interface GitTerminalProps {
@@ -11,23 +12,12 @@ interface GitTerminalProps {
   currentStep?: number;
   onStepComplete?: (step: number) => void;
   onCommandExecute?: (command: string, result: any) => void;
+  onTutorMessage?: (message: string) => void;
+  onRepositoryState?: (state: RepoState) => void;
   className?: string;
 }
 
-interface GitCommandResult {
-  successful: boolean;
-  exitCode: number;
-  output: string;
-  errorOutput: string;
-  commitHash?: string;
-}
-
-interface RepositoryState {
-  repositoryId: number;
-  currentBranch: string;
-  commits: any[];
-  branches: any[];
-}
+// Types now sourced from shared types in ../../types/git
 
 const GitTerminal: React.FC<GitTerminalProps> = ({
   repositoryId,
@@ -35,13 +25,15 @@ const GitTerminal: React.FC<GitTerminalProps> = ({
   currentStep = 0,
   onStepComplete,
   onCommandExecute,
+  onTutorMessage,
+  onRepositoryState,
   className = ''
 }) => {
   const [commandHistory, setCommandHistory] = useState<CommandHistoryItem[]>([]);
   const [currentOutput, setCurrentOutput] = useState<string>('');
   const [currentError, setCurrentError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const [repositoryState, setRepositoryState] = useState<RepositoryState | null>(null);
+  const [repositoryState, setRepositoryState] = useState<RepoState | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [terminalSize, setTerminalSize] = useState<'normal' | 'expanded'>('normal');
   
@@ -59,23 +51,40 @@ const GitTerminal: React.FC<GitTerminalProps> = ({
     if (!repositoryId) return;
     
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('No authentication token available for repository state fetch');
+        return;
+      }
+
       const response = await fetch(`/api/v1/git/repository/${repositoryId}/state`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
       
       if (response.ok) {
-        const state = await response.json();
+        const state: RepoState = await response.json();
         setRepositoryState(state);
+        if (onRepositoryState) onRepositoryState(state);
+      } else if (response.status === 401) {
+        console.warn('Session expired while fetching repository state');
+        showError('Session expired. Please refresh the page and login again.');
+      } else if (response.status === 404) {
+        console.warn('Repository not found while fetching state');
+        showError('Repository not found. Please restart the scenario.');
+      } else {
+        console.error('Failed to fetch repository state:', response.status);
+        // Don't show error to user for non-critical state fetch failures
       }
     } catch (error) {
-      console.error('Failed to fetch repository state:', error);
+      console.error('Network error while fetching repository state:', error);
+      // Don't show error to user for non-critical state fetch failures
     }
   };
 
-  const executeCommand = async (command: string): Promise<GitCommandResult> => {
+  const executeCommand = async (command: string): Promise<ExecuteResponse> => {
     if (!repositoryId) {
       throw new Error('No repository selected');
     }
@@ -124,7 +133,8 @@ const GitTerminal: React.FC<GitTerminalProps> = ({
       setCommandHistory(prev => [...prev, historyItem]);
 
       // Execute command
-      const result = await executeCommand(command);
+      const execResponse = await executeCommand(command);
+      const result = execResponse.result;
       const executionTime = Date.now() - startTime;
 
       // Update output
@@ -147,13 +157,26 @@ const GitTerminal: React.FC<GitTerminalProps> = ({
       );
 
       // Refresh repository state
-      await fetchRepositoryState();
+      if (execResponse.repositoryState) {
+        setRepositoryState(execResponse.repositoryState as RepoState);
+        if (onRepositoryState) onRepositoryState(execResponse.repositoryState as RepoState);
+      } else {
+        await fetchRepositoryState();
+      }
 
       // Show feedback
       if (result.successful) {
         showSuccess(`Command executed successfully in ${executionTime}ms`);
       } else {
-        showError('Command failed to execute');
+        // Don't show generic error for expected command failures (like git status showing "nothing to commit")
+        if (result.errorOutput && !result.errorOutput.includes('nothing to commit') && !result.errorOutput.includes('working tree clean')) {
+          showError(result.errorOutput || 'Command failed to execute');
+        }
+      }
+
+      // Surface tutor message from server (success or failure context)
+      if (execResponse.tutorMessage && onTutorMessage) {
+        onTutorMessage(execResponse.tutorMessage);
       }
 
       // Notify parent component
@@ -162,15 +185,30 @@ const GitTerminal: React.FC<GitTerminalProps> = ({
       }
 
       // Check if step is complete
-      if (scenarioId && currentStep !== undefined && result.successful && onStepComplete) {
-        // This would typically be handled by the parent component
-        // based on scenario validation logic
-        onStepComplete(currentStep + 1);
+      // Server-driven step completion
+      if (scenarioId && onStepComplete && execResponse.stepCompleted && typeof execResponse.nextStepNumber === 'number') {
+        onStepComplete(execResponse.nextStepNumber);
       }
 
     } catch (error) {
       const executionTime = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      let errorMessage = 'Unknown error occurred';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('HTTP error! status: 401')) {
+          errorMessage = 'Your session has expired. Please refresh the page and login again.';
+        } else if (error.message.includes('HTTP error! status: 403')) {
+          errorMessage = 'You don\'t have permission to execute this command.';
+        } else if (error.message.includes('HTTP error! status: 404')) {
+          errorMessage = 'Repository not found. Please restart the scenario.';
+        } else if (error.message.includes('HTTP error! status: 500')) {
+          errorMessage = 'Server error occurred. Please try again or contact support.';
+        } else if (error.message.includes('fetch')) {
+          errorMessage = 'Unable to connect to server. Please check your internet connection.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
       
       setCurrentError(errorMessage);
       showError(`Command execution failed: ${errorMessage}`);
@@ -229,6 +267,23 @@ const GitTerminal: React.FC<GitTerminalProps> = ({
 
   const commandHistoryStrings = commandHistory.map(item => item.command);
 
+  // Show loading state if no repositoryId
+  if (!repositoryId) {
+    return (
+      <div className={`git-terminal ${className}`}>
+        <Card variant="elevated" className="p-8 text-center">
+          <div className="text-yellow-600 dark:text-yellow-400 mb-4">
+            <span className="text-4xl">⚠️</span>
+          </div>
+          <h3 className="text-lg font-semibold mb-2">No Repository</h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            Repository is being created. Please wait or try starting the scenario again.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className={`git-terminal ${className}`}>
       <Card variant="elevated" className={`transition-all duration-300 ${terminalSize === 'expanded' ? 'fixed inset-4 z-50' : ''}`}>
@@ -247,7 +302,19 @@ const GitTerminal: React.FC<GitTerminalProps> = ({
                   {repositoryState.currentBranch}
                 </span>
                 <span className="text-gray-400">•</span>
+                <span>HEAD: {repositoryState.headRef || `refs/heads/${repositoryState.currentBranch}`}</span>
+                <span className="text-gray-400">•</span>
                 <span>{repositoryState.commits.length} commits</span>
+                {repositoryState.stagingArea && (
+                  <>
+                    <span className="text-gray-400">•</span>
+                    <span>Staged: {Object.keys(repositoryState.stagingArea).length}</span>
+                  </>
+                )}
+                <span className="text-gray-400">•</span>
+                <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                  Tip: use "git fs create &lt;file&gt; [content]" to simulate files
+                </span>
               </div>
             )}
           </div>

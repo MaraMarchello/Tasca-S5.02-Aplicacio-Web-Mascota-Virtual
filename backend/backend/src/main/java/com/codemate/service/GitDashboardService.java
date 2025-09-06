@@ -5,6 +5,8 @@ import com.codemate.model.GitUserProgress;
 import com.codemate.model.UserAchievement;
 import com.codemate.payload.response.GitDashboardResponse;
 import com.codemate.payload.response.GitScenarioResponse;
+import com.codemate.service.scenario.GitScenarioFacadeService;
+import com.codemate.service.scenario.ScenarioProgressService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,7 +24,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class GitDashboardService {
 
-    private final GitScenarioService gitScenarioService;
+    private final GitScenarioFacadeService gitScenarioFacadeService;
     private final AchievementService achievementService;
     private final PointTransactionService pointTransactionService;
 
@@ -33,10 +35,10 @@ public class GitDashboardService {
         log.info("Getting Git dashboard data for user: {}", userId);
 
         // Get user progress and stats
-        GitScenarioService.GitUserStats userStats = gitScenarioService.getUserStats(userId);
-        List<GitUserProgress> userProgress = gitScenarioService.getUserProgress(userId);
-        List<GitUserProgress> completedScenarios = gitScenarioService.getCompletedScenarios(userId);
-        List<GitUserProgress> inProgressScenarios = gitScenarioService.getInProgressScenarios(userId);
+        ScenarioProgressService.GitUserStats userStats = gitScenarioFacadeService.getUserStats(userId);
+        List<GitUserProgress> userProgress = gitScenarioFacadeService.getUserProgress(userId);
+        List<GitUserProgress> completedScenarios = gitScenarioFacadeService.getCompletedScenarios(userId);
+        List<GitUserProgress> inProgressScenarios = gitScenarioFacadeService.getInProgressScenarios(userId);
 
         // Get achievement data
         List<UserAchievement> allAchievements = achievementService.getUserAchievements(userId);
@@ -86,7 +88,7 @@ public class GitDashboardService {
     public GitDashboardResponse.GitLearningStats getGitLearningStats() {
         log.info("Getting overall Git learning statistics");
 
-        List<GitScenario> allScenarios = gitScenarioService.getAllActiveScenarios();
+        List<GitScenario> allScenarios = gitScenarioFacadeService.getAllActiveScenarios();
         
         // This would require additional repository methods for global stats
         return GitDashboardResponse.GitLearningStats.builder()
@@ -201,7 +203,7 @@ public class GitDashboardService {
 
     private List<GitScenarioResponse> getRecommendedScenarios(Long userId, List<GitUserProgress> userProgress) {
         // Get all scenarios
-        List<GitScenario> allScenarios = gitScenarioService.getAllActiveScenarios();
+        List<GitScenario> allScenarios = gitScenarioFacadeService.getAllActiveScenarios();
         
         // Get completed scenario IDs
         List<String> completedScenarioIds = userProgress.stream()

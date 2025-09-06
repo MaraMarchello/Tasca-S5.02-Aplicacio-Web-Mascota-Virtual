@@ -1,0 +1,36 @@
+# Example configuration for secure DataLoader setup
+# Copy these settings to your main application.yml or application-{profile}.yml files
+
+app:
+  # Default user creation settings
+  data-loader:
+    create-default-users: false  # Set to true only in development
+    log-credentials: false       # Set to true only in development for debugging
+  
+  # Default passwords (use strong passwords in production)
+  default:
+    admin:
+      password: ${ADMIN_DEFAULT_PASSWORD:}  # Set via environment variable
+    user:
+      password: ${USER_DEFAULT_PASSWORD:}   # Set via environment variable
+
+# Example environment variables to set:
+# ADMIN_DEFAULT_PASSWORD=your-strong-admin-password-here
+# USER_DEFAULT_PASSWORD=your-strong-user-password-here
+
+# For development profiles, you might enable:
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+      
+app:
+  data-loader:
+    create-default-users: true
+    log-credentials: true
+  default:
+    admin:
+      password: ${ADMIN_DEFAULT_PASSWORD:change-me-in-production}
+    user:
+      password: ${USER_DEFAULT_PASSWORD:change-me-in-production}

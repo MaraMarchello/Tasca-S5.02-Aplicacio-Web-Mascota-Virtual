@@ -89,10 +89,25 @@ export interface RepositoryState {
   currentBranch: string;
   commits: GitCommit[];
   branches: GitBranch[];
+  // The following fields will be populated progressively as the simulator expands
+  workingDirectory?: { [filename: string]: string };
+  stagingArea?: { [filename: string]: string };
+  headRef?: string; // e.g., refs/heads/main or detached
+  detachedHead?: boolean;
+  remotes?: { [remoteName: string]: { [ref: string]: string } };
   workingDirectory: { [filename: string]: string };
   stagingArea: { [filename: string]: string };
   lastCommand?: string;
   lastCommandResult?: GitCommandResult;
+}
+
+export interface ExecuteResponse {
+  result: GitCommandResult;
+  stepCompleted?: boolean;
+  nextStepNumber?: number;
+  progress?: UserProgress;
+  repositoryState?: RepositoryState;
+  tutorMessage?: string;
 }
 
 export interface ScenarioStep {

@@ -2,7 +2,7 @@ package com.codemate.payload.response;
 
 import com.codemate.model.GitScenario;
 import com.codemate.model.GitUserProgress;
-import com.codemate.service.GitScenarioService;
+import com.codemate.service.scenario.ScenarioProgressService;
 import lombok.Builder;
 import lombok.Data;
 
@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 @Builder
 public class GitDashboardResponse {
     private Long userId;
-    private GitScenarioService.GitUserStats userStats;
+    private ScenarioProgressService.GitUserStats userStats;
     private Long currentPoints;
     private Long totalPointsEarned;
     private Integer completedScenarios;

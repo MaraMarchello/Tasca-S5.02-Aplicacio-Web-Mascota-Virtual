@@ -115,7 +115,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex, WebRequest request) {
         String error = String.format("Parameter '%s' should be of type %s", 
-                                    ex.getName(), ex.getRequiredType().getSimpleName());
+                                    ex.getName(), ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown");
         log.error("Type mismatch: {}", error, ex);
         ApiResponse apiResponse = new ApiResponse(false, error);
         return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);

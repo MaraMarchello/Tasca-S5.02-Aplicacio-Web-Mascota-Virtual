@@ -32,7 +32,13 @@ export const DEFAULT_GRAPH_CONFIG: GraphConfig = {
   }
 };
 
-export function getBranchColor(branchName: string, config: GraphConfig = DEFAULT_GRAPH_CONFIG): string {
+export function getBranchColor(branchName: string | null | undefined, config: GraphConfig = DEFAULT_GRAPH_CONFIG): string {
+  // Handle null/undefined branchName gracefully
+  if (!branchName || typeof branchName !== 'string') {
+    console.warn('getBranchColor: branchName is null, undefined, or not a string:', branchName);
+    return config.colors.default;
+  }
+  
   const lowerName = branchName.toLowerCase();
   
   if (lowerName === 'main' || lowerName === 'master') {
@@ -84,6 +90,34 @@ export function calculateCommitPositions(
 
   // Calculate positions
   const visualCommits: VisualizationCommit[] = sortedCommits.map((commit) => {
+    // Validate commit data
+    if (!commit || !commit.branchName) {
+      console.warn('calculateCommitPositions: Invalid commit data:', commit);
+      const fallbackCommit = {
+        ...commit,
+        branchName: commit?.branchName || 'unknown',
+        commitHash: commit?.commitHash || 'unknown',
+        message: commit?.message || 'Unknown commit',
+        timestamp: commit?.timestamp || new Date().toISOString(),
+        author: commit?.author || 'Unknown',
+        authorEmail: commit?.authorEmail || 'unknown@example.com'
+      };
+      
+      const branchIndex = branchPositions.get(fallbackCommit.branchName) || 0;
+      const x = xScale(new Date(fallbackCommit.timestamp));
+      const y = dimensions.margin.top + (branchIndex * config.branchSpacing) + config.commitRadius;
+      
+      return {
+        ...fallbackCommit,
+        x,
+        y,
+        radius: config.commitRadius,
+        color: getBranchColor(fallbackCommit.branchName, config),
+        selected: false,
+        highlighted: false
+      };
+    }
+    
     const branchIndex = branchPositions.get(commit.branchName) || 0;
     const x = xScale(new Date(commit.timestamp));
     const y = dimensions.margin.top + (branchIndex * config.branchSpacing) + config.commitRadius;
@@ -108,6 +142,28 @@ export function calculateBranchPaths(
   config: GraphConfig = DEFAULT_GRAPH_CONFIG
 ): VisualizationBranch[] {
   const visualBranches: VisualizationBranch[] = branches.map(branch => {
+    // Validate branch data
+    if (!branch || !branch.branchName) {
+      console.warn('calculateBranchPaths: Invalid branch data:', branch);
+      return {
+        id: branch?.id || -1,
+        repositoryId: branch?.repositoryId || 0,
+        branchName: 'unknown',
+        headCommitId: branch?.headCommitId || undefined,
+        isActive: false,
+        createdAt: new Date().toISOString(),
+        mergedAt: undefined,
+        isMerged: false,
+        color: config.colors.default,
+        path: '',
+        commits: [],
+        startX: 0,
+        startY: 0,
+        endX: 0,
+        endY: 0
+      };
+    }
+    
     const branchCommits = commits.filter(c => c.branchName === branch.branchName);
     
     if (branchCommits.length === 0) {

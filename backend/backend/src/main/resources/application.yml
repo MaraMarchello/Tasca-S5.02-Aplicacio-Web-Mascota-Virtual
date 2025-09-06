@@ -3,7 +3,7 @@ spring:
     name: codemate
   
   datasource:
-    url: jdbc:postgresql://localhost:5433/codemate
+    url: jdbc:postgresql://localhost:5432/codemate
     username: postgres
     password: 78446660579
     driver-class-name: org.postgresql.Driver
@@ -32,8 +32,9 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    out-of-order: true
     locations: classpath:db/migration
-    url: jdbc:postgresql://localhost:5433/codemate
+    url: jdbc:postgresql://localhost:5432/codemate
     user: postgres
     password: 78446660579
     clean-disabled: false
@@ -78,7 +79,84 @@ app:
     allowed-origins: http://localhost:3000,http://localhost:5173
   
   cache:
-    ttl: 3600 # 1 hour in seconds 
+    ttl: 3600 # 1 hour in seconds
+  
+  git:
+    execution:
+      enabled: ${GIT_REAL_EXECUTION_ENABLED:true} # Enable real Git command execution
+      timeout: 30 # Command timeout in seconds
+    workspace:
+      base-path: ${GIT_WORKSPACE_PATH:${java.io.tmpdir}/codemate-git-workspaces}
+      cleanup-hours: 24 # Clean up workspaces after this many hours
+      max-size-mb: 100 # Maximum workspace size in MB
+    
+    # Security settings
+    security:
+      monitoring-enabled: true
+      threat-detection-enabled: true
+      auto-response-enabled: true
+      max-failed-attempts: 5
+      lockout-duration-minutes: 15
+      assessment-interval-ms: 300000 # 5 minutes
+      enable-posix-permissions: true
+    
+    # Rate limiting
+    rate-limit:
+      commands-per-minute: 30
+      commands-per-hour: 500
+      commands-per-day: 2000
+      global-commands-per-minute: 200
+      max-concurrent-commands: 10
+      command-timeout-seconds: 30
+    
+    # Resource monitoring
+    resources:
+      max-cpu-percent: 80
+      max-memory-percent: 70
+      max-disk-percent: 85
+      user-disk-quota-mb: 500
+      user-memory-quota-mb: 100
+      max-file-count-per-user: 1000
+      monitoring-enabled: true
+      monitoring-interval-ms: 30000 # 30 seconds
+      cleanup-interval-ms: 3600000 # 1 hour
+    
+    # Session management
+    session:
+      max-idle-minutes: 30
+      max-active-hours: 8
+      cleanup-interval-minutes: 15
+      max-concurrent-sessions: 5
+      workspace-retention-hours: 48
+      emergency-cleanup-enabled: true
+      repository-lifetime-hours: 4
+      max-repositories-per-user: 5
+    
+    # Permissions
+    permissions:
+      enable-strict-access: true
+      demo-access-timeout-hours: 24
+      shared-repository-enabled: false
+    
+    # Audit logging
+    audit:
+      enabled: true
+      log-path: ${GIT_AUDIT_PATH:${java.io.tmpdir}/codemate-audit}
+      log-level: INFO
+      include-command-output: false
+      max-log-file-size-mb: 100
+
+    # Comprehensive cleanup settings
+    cleanup:
+      abandoned-session-hours: 2
+      orphaned-workspace-hours: 24
+      temp-files-hours: 1
+      max-workspace-size-mb: 1000
+      max-total-size-gb: 10
+      aggressive-cleanup-enabled: true
+      parallel-cleanup: true
+      comprehensive-interval-minutes: 60
+      quick-interval-minutes: 15 
   jwt:
     # A secure, randomly generated key for development. In production, use environment variables.
     secret: ${JWT_SECRET:04ca023b39512e46d0c2cf4b48d5aac61d34302994c87ed4eff225dcf3b0a218739f3897051a057f9b846a69ea2927a587044164b7bae5e1306219d50b588cb1}

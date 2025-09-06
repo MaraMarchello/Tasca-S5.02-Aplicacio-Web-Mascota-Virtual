@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '../ui';
 import GitPrompt from './GitPrompt';
 import GitOutput from './GitOutput';
 import CommandHistory, { CommandHistoryItem } from './CommandHistory';
+import demoGitService from '../../services/demoGitService';
+import { GitRepository } from '../../types/git';
 
 const GitTerminalDemo: React.FC = () => {
   const [activeDemo, setActiveDemo] = useState<'terminal' | 'prompt' | 'output' | 'history'>('terminal');
@@ -47,34 +49,121 @@ const GitTerminalDemo: React.FC = () => {
   const [currentError, setCurrentError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  
+  // Real Git execution state
+  const [demoRepository, setDemoRepository] = useState<GitRepository | null>(null);
+  const [isRealGitEnabled, setIsRealGitEnabled] = useState<boolean>(false);
+  const [initializationError, setInitializationError] = useState<string>('');
 
-  const handleDemoCommand = (command: string) => {
+  // Initialize demo repository on component mount
+  useEffect(() => {
+    initializeDemoRepository();
+  }, []);
+
+  const initializeDemoRepository = async () => {
+    try {
+      setIsLoading(true);
+      setInitializationError('');
+      
+      // Check if real Git is enabled and create demo repository
+      const isEnabled = await demoGitService.isRealGitEnabled();
+      setIsRealGitEnabled(isEnabled);
+      
+      if (isEnabled) {
+        const repository = await demoGitService.getOrCreateDemoRepository();
+        setDemoRepository(repository);
+        console.log('Demo repository initialized:', repository);
+      } else {
+        console.warn('Real Git execution not enabled - falling back to simulation mode');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to initialize demo repository';
+      setInitializationError(errorMessage);
+      console.error('Demo initialization error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDemoCommand = async (command: string) => {
     if (isLoading) return;
 
     setIsLoading(true);
     setCurrentOutput('');
     setCurrentError('');
 
-    // Simulate API delay
-    setTimeout(() => {
-      const mockOutput = generateMockOutput(command);
-      const successful = Math.random() > 0.15; // 85% success rate
+    const startTime = Date.now();
+    const commandId = Date.now().toString();
+
+    try {
+      let result;
+      let successful = true;
+      let output = '';
+      let errorOutput = '';
+
+      if (isRealGitEnabled && demoRepository) {
+        // Execute real Git command
+        console.log('Executing real Git command:', command);
+        const executeResponse = await demoGitService.executeCommand(command);
+        result = executeResponse.result;
+        successful = result.successful;
+        output = result.output;
+        errorOutput = result.errorOutput;
+      } else {
+        // Fall back to simulation mode
+        console.log('Using simulation mode for command:', command);
+        const mockOutput = generateMockOutput(command);
+        successful = Math.random() > 0.15; // 85% success rate
+        output = successful ? mockOutput : '';
+        errorOutput = successful ? '' : 'Command failed: Invalid command or repository state';
+        
+        // Simulate network delay for consistency
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 500 + 200));
+      }
+
+      const executionTime = Date.now() - startTime;
 
       const newCommand: CommandHistoryItem = {
-        id: Date.now().toString(),
+        id: commandId,
         command,
-        output: successful ? mockOutput : '',
-        error: successful ? '' : 'Command failed: Invalid command or repository state',
+        output,
+        error: errorOutput,
         timestamp: new Date(),
         successful,
-        executionTime: Math.floor(Math.random() * 200) + 50
+        executionTime
       };
 
       setDemoHistory(prev => [...prev, newCommand]);
-      setCurrentOutput(successful ? mockOutput : '');
-      setCurrentError(successful ? '' : 'Command failed: Invalid command or repository state');
+      setCurrentOutput(output);
+      setCurrentError(errorOutput);
+
+    } catch (error) {
+      const executionTime = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      console.error('Command execution failed:', error);
+
+      const newCommand: CommandHistoryItem = {
+        id: commandId,
+        command,
+        output: '',
+        error: errorMessage,
+        timestamp: new Date(),
+        successful: false,
+        executionTime
+      };
+
+      setDemoHistory(prev => [...prev, newCommand]);
+      setCurrentOutput('');
+      setCurrentError(errorMessage);
+
+      // If authentication error, suggest refresh
+      if (errorMessage.includes('expired') || errorMessage.includes('401')) {
+        setCurrentError(errorMessage + ' Try refreshing the page and logging in again.');
+      }
+    } finally {
       setIsLoading(false);
-    }, Math.random() * 1000 + 300); // Random delay between 300-1300ms
+    }
   };
 
   const generateMockOutput = (command: string): string => {
@@ -158,6 +247,29 @@ Try different Git commands to see various outputs!`;
     setCurrentOutput('');
     setCurrentError('');
     setDemoHistory([]);
+  };
+
+  const resetDemoRepository = async () => {
+    if (!isRealGitEnabled) return;
+    
+    try {
+      setIsLoading(true);
+      setCurrentOutput('');
+      setCurrentError('');
+      
+      console.log('Resetting demo repository...');
+      const newRepository = await demoGitService.resetDemoRepository();
+      setDemoRepository(newRepository);
+      setDemoHistory([]);
+      
+      setCurrentOutput('Demo repository has been reset. You can start fresh with git init.');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reset repository';
+      console.error('Error resetting demo repository:', error);
+      setCurrentError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const exportHistory = () => {
@@ -262,7 +374,19 @@ Untracked files:
                     main
                   </span>
                   <span className="text-gray-400">•</span>
-                  <span>Demo Mode</span>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    isRealGitEnabled 
+                      ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                      : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+                  }`}>
+                    {isRealGitEnabled ? '🔴 Real Git' : '🎭 Simulation'}
+                  </span>
+                  {demoRepository && (
+                    <>
+                      <span className="text-gray-400">•</span>
+                      <span className="text-xs">ID: {demoRepository.id}</span>
+                    </>
+                  )}
                 </div>
               </div>
               
@@ -292,6 +416,17 @@ Untracked files:
                 >
                   🧹 Clear
                 </Button>
+                {isRealGitEnabled && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetDemoRepository}
+                    className="text-xs"
+                    disabled={isLoading}
+                  >
+                    🔄 Reset Repo
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -310,14 +445,39 @@ Untracked files:
                   ) : (
                     <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
                       <div className="text-4xl mb-4">🚀</div>
-                      <p className="text-lg mb-2">Welcome to Git Terminal Demo</p>
-                      <p className="text-sm">
-                        Start typing git commands below to see how the terminal works!
+                      <p className="text-lg mb-2">
+                        Welcome to Git Terminal Demo
                       </p>
+                      <p className="text-sm mb-4">
+                        {isRealGitEnabled 
+                          ? 'Real Git execution enabled! Commands will be executed in an isolated environment.'
+                          : 'Simulation mode active. Commands will return mock responses.'
+                        }
+                      </p>
+                      
+                      {initializationError && (
+                        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                          <p className="text-sm text-red-800 dark:text-red-200">
+                            ⚠️ {initializationError}
+                          </p>
+                          <button 
+                            onClick={initializeDemoRepository}
+                            className="mt-2 text-xs text-red-600 dark:text-red-400 underline"
+                          >
+                            Try again
+                          </button>
+                        </div>
+                      )}
+                      
                       <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                         <p className="text-sm text-blue-800 dark:text-blue-200">
-                          💡 Try commands like: git status, git add ., git commit -m "message", git log
+                          💡 Try commands like: git init, git status, git add ., git commit -m "message", git log
                         </p>
+                        {isRealGitEnabled && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                            🔄 Use "Reset Repo" button to start with a fresh repository
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}

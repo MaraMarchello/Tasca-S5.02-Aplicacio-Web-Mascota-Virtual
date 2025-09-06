@@ -90,13 +90,38 @@ const GitGraph: React.FC<GitGraphProps> = ({
 
   // Calculate layout when data changes
   useEffect(() => {
-    if (commits.length === 0) {
+    if (!commits || commits.length === 0) {
       setLayout(null);
       return;
     }
 
-    const newLayout = createGraphLayout(commits, branches, dimensions, config);
-    setLayout(newLayout);
+    // Validate and filter out invalid commits/branches
+    const validCommits = commits.filter(commit => 
+      commit && 
+      commit.branchName && 
+      commit.commitHash && 
+      commit.timestamp
+    );
+    
+    const validBranches = branches.filter(branch => 
+      branch && 
+      branch.branchName && 
+      typeof branch.id === 'number'
+    );
+
+    if (validCommits.length === 0) {
+      console.warn('GitGraph: No valid commits found');
+      setLayout(null);
+      return;
+    }
+
+    try {
+      const newLayout = createGraphLayout(validCommits, validBranches, dimensions, config);
+      setLayout(newLayout);
+    } catch (error) {
+      console.error('GitGraph: Error creating layout:', error);
+      setLayout(null);
+    }
   }, [commits, branches, dimensions, config]);
 
   // Setup zoom and pan behavior

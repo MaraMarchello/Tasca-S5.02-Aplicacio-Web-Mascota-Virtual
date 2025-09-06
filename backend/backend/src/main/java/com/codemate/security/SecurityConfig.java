@@ -68,9 +68,9 @@ public class SecurityConfig {
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/public/**")).permitAll()
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/v1/test/**")).permitAll()
                 
-                // Git scenarios public access for demo mode
-                .requestMatchers(AntPathRequestMatcher.antMatcher("/api/v1/git/scenarios")).permitAll()
-                .requestMatchers(AntPathRequestMatcher.antMatcher("/api/v1/git/scenarios/**")).permitAll()
+                // Git scenarios require USER role
+                .requestMatchers(AntPathRequestMatcher.antMatcher("/api/v1/git/scenarios")).hasRole("USER")
+                .requestMatchers(AntPathRequestMatcher.antMatcher("/api/v1/git/scenarios/**")).hasRole("USER")
                 
                 // Admin-only endpoints
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/admin/**")).hasRole("ADMIN")
